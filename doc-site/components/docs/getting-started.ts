@@ -1,12 +1,22 @@
 export const gettingStartedMarkdown = `# Getting Started with Puffinflow
 
+Welcome to **Puffinflow** - the modern Python framework for building reliable, scalable workflows and multi-agent systems! Whether you're orchestrating microservices, building AI pipelines, or managing complex data processing workflows, Puffinflow makes it simple and robust.
+
+## Why Puffinflow?
+
+- **⚡ Simple**: Start with 3 lines of code, scale to production
+- **🔄 Reliable**: Built-in retries, circuit breakers, and error handling
+- **📊 Observable**: Complete monitoring, metrics, and tracing out of the box
+- **⚖️ Scalable**: Resource management, rate limiting, and coordination primitives
+- **🤖 AI-Ready**: Perfect for LLM workflows, RAG systems, and agent orchestration
+
 ## Prerequisites
 
 - **Python 3.9+** (3.9, 3.10, 3.11, 3.12, 3.13 supported)
 - Basic familiarity with \`async/await\` in Python
 - 5 minutes to get your first workflow running! ⏱️
 
-## Installation
+## Quick Installation
 
 \`\`\`bash
 pip install puffinflow
@@ -48,34 +58,47 @@ Agent name: my-first-workflow
 Result: Hello from PuffinFlow!
 \`\`\`
 
-🎉 **Congratulations!** You just ran your first Puffinflow workflow.
+🎉 **Congratulations!** You just ran your first Puffinflow workflow!
+
+## Core Concepts
+
+Before diving deeper, let's understand the key concepts:
+
+### 🏗️ **Agent**: Your Workflow Container
+An Agent is like a container that holds and executes your workflow states. Think of it as your workflow's "brain" that coordinates everything.
+
+### 🎯 **State**: Individual Steps  
+States are async functions that represent individual steps in your workflow. They receive a \`context\` parameter to share data and can return the next state to run.
+
+### 📦 **Context**: Shared Memory
+The context is how states communicate - it's like a shared memory space where you can store and retrieve variables throughout your workflow.
 
 ## Two Ways to Define States
 
 For simple workflows, both approaches work identically:
 
-### Plain Functions (Simplest)
+### Plain Functions (Start Here!)
 \`\`\`python
 async def process_data(context):
     context.set_variable("result", "Hello!")
-    return None
+    return None  # Continue to next state, or end workflow
 \`\`\`
 
-### With Decorator (For Advanced Features Later)
+### With Decorator (For Production Features)
 \`\`\`python
 from puffinflow import state
 
-@state
+@state(cpu=2.0, memory=1024, timeout=30.0, max_retries=3)
 async def process_data(context):
     context.set_variable("result", "Hello!")
     return None
 \`\`\`
 
-> **The difference?** None for basic workflows! The decorator becomes useful when you later want to add resource management, priorities, rate limiting, etc. Start simple, add the decorator when you need advanced features.
+> **When to use decorators?** Start with plain functions. Add the \`@state\` decorator when you need resource limits, timeouts, retries, or priority control. Perfect for production workloads!
 
 ## Sharing Data Between States
 
-The **context** is how states communicate with each other. Think of it as a type-safe shared memory:
+The **context** is how states communicate with each other. Think of it as a shared memory that persists throughout your workflow:
 
 \`\`\`python
 import asyncio
@@ -86,8 +109,8 @@ agent = Agent("data-pipeline")
 async def fetch_data(context):
     # Simulate fetching data from an API
     print("📊 Fetching user data...")
-
-    # Store data in context
+    
+    # Store data in context - available to all future states
     context.set_variable("user_count", 1250)
     context.set_variable("revenue", 45000)
     print("✅ Data fetched successfully")
@@ -96,28 +119,35 @@ async def calculate_metrics(context):
     # Get data from previous state
     users = context.get_variable("user_count")
     revenue = context.get_variable("revenue")
-
+    
     # Calculate and store result
     revenue_per_user = revenue / users
     context.set_variable("revenue_per_user", revenue_per_user)
-
+    
     print(f"💰 Revenue per user: \${revenue_per_user:.2f}")
     print("✅ Metrics calculated")
 
 async def send_report(context):
     # Use the calculated metric
     rpu = context.get_variable("revenue_per_user")
-
-    print(f"📧 Sending report: RPU is \${rpu:.2f}")
+    user_count = context.get_variable("user_count")
+    
+    print(f"📧 Sending report: {user_count} users, RPU is \${rpu:.2f}")
+    context.set_variable("report_sent", True)
     print("✅ Report sent!")
 
-# Add states to workflow
+# Add states to workflow - they'll run sequentially by default
 agent.add_state("fetch_data", fetch_data)
-agent.add_state("calculate_metrics", calculate_metrics)
-agent.add_state("send_report", send_report)
+agent.add_state("calculate_metrics", calculate_metrics, dependencies=["fetch_data"])
+agent.add_state("send_report", send_report, dependencies=["calculate_metrics"])
 
 # Run the complete pipeline
-asyncio.run(agent.run())
+async def main():
+    result = await agent.run()
+    print(f"\\nWorkflow completed! Report sent: {result.get_variable('report_sent')}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
 \`\`\`
 
 **Output:**
@@ -126,784 +156,642 @@ asyncio.run(agent.run())
 ✅ Data fetched successfully
 💰 Revenue per user: $36.00
 ✅ Metrics calculated
-📧 Sending report: RPU is $36.00
+📧 Sending report: 1250 users, RPU is $36.00
 ✅ Report sent!
+
+Workflow completed! Report sent: True
 \`\`\`
 
-## Three Ways to Control Workflow Flow
-
-Puffinflow gives you three powerful ways to control how your workflow executes:
-
-### 1. Sequential Execution (Default)
-
-States run in the order you add them:
+### 💡 Context Methods You'll Use Most
 
 \`\`\`python
-agent = Agent("sequential-workflow")
+# Store any Python object
+context.set_variable("user_data", {"name": "Alice", "age": 30})
+context.set_variable("score", 95.5)
+context.set_variable("items", [1, 2, 3, 4, 5])
 
-async def step_one(context):
-    print("Step 1: Preparing data")
-    context.set_variable("step1_done", True)
-
-async def step_two(context):
-    print("Step 2: Processing data")
-    context.set_variable("step2_done", True)
-
-async def step_three(context):
-    print("Step 3: Finalizing")
-    print("All steps complete!")
-
-# Runs in this exact order: step_one → step_two → step_three
-agent.add_state("step_one", step_one)
-agent.add_state("step_two", step_two)
-agent.add_state("step_three", step_three)
+# Retrieve with optional defaults
+user_data = context.get_variable("user_data")
+score = context.get_variable("score", 0.0)  # Default to 0.0 if not found
+missing = context.get_variable("nonexistent", "default_value")
 \`\`\`
 
-### 2. Conditional Execution
+## Workflow Control: Make It Smart
 
-Use conditional logic to control when states execute:
+Puffinflow gives you powerful ways to control how your workflow executes. Let's see the most practical patterns:
+
+### 1. 🔗 Dependencies: "Wait for X before doing Y"
+
+Use dependencies when some states need others to complete first:
 
 \`\`\`python
+agent = Agent("smart-workflow")
+
 async def fetch_user_data(context):
-    print("👥 Fetching user data...")
+    print("👥 Fetching users...")
     await asyncio.sleep(0.5)  # Simulate API call
-    context.set_variable("user_count", 1250)
-    context.set_variable("user_data_ready", True)
-    return "fetch_sales_data"
+    context.set_variable("users", ["Alice", "Bob", "Charlie"])
 
 async def fetch_sales_data(context):
-    print("💰 Fetching sales data...")
-    await asyncio.sleep(0.3)  # Simulate API call
-    context.set_variable("revenue", 45000)
-    context.set_variable("sales_data_ready", True)
-    return "generate_report"
+    print("💰 Fetching sales...")
+    await asyncio.sleep(0.3)  # Simulate API call  
+    context.set_variable("sales", [100, 200, 150])
 
 async def generate_report(context):
-    # Check if prerequisite data is available
-    if not context.get_variable("user_data_ready") or not context.get_variable("sales_data_ready"):
-        print("❌ Data not ready for report generation")
-        return None
+    # This waits for BOTH fetch operations to complete
+    users = context.get_variable("users")
+    sales = context.get_variable("sales")
+    
+    print(f"📊 Report: {len(users)} users, {sum(sales)} total sales")
+    context.set_variable("report", "Generated!")
 
-    print("📊 Generating report...")
-    users = context.get_variable("user_count")
-    revenue = context.get_variable("revenue")
-    print(f"Revenue per user: \${revenue/users:.2f}")
-
-# States run in sequence due to return values
+# fetch_user_data and fetch_sales_data run in PARALLEL
+# generate_report waits for BOTH to complete
 agent.add_state("fetch_user_data", fetch_user_data)
 agent.add_state("fetch_sales_data", fetch_sales_data)
-agent.add_state("generate_report", generate_report)
+agent.add_state("generate_report", generate_report, 
+               dependencies=["fetch_user_data", "fetch_sales_data"])
+
+# Runs: fetch_user_data + fetch_sales_data → generate_report
 \`\`\`
 
-### 3. Dynamic Flow Control
+### 2. 🤔 Dynamic Routing: "Decide what to do next"
 
-Return state names from functions to decide what runs next:
+Return state names to dynamically route your workflow:
 
 \`\`\`python
-async def check_user_type(context):
-    print("🔍 Checking user type...")
-    user_type = "premium"  # Could come from database
-    context.set_variable("user_type", user_type)
+agent = Agent("smart-routing")
 
+async def check_user_type(context):
+    # Could come from database, API, etc.
+    user_type = context.get_variable("user_type", "basic")
+    print(f"🔍 User type: {user_type}")
+    
     # Dynamic routing based on data
     if user_type == "premium":
-        return "premium_flow"
+        return "premium_workflow"
+    elif user_type == "enterprise":
+        return "enterprise_workflow" 
     else:
-        return "basic_flow"
+        return "basic_workflow"
 
-async def premium_flow(context):
-    print("⭐ Premium user workflow")
-    context.set_variable("features", ["advanced_analytics", "priority_support"])
+async def premium_workflow(context):
+    print("⭐ Premium features enabled")
+    context.set_variable("features", ["advanced_analytics", "priority_support", "custom_reports"])
     return "send_welcome"
 
-async def basic_flow(context):
-    print("👋 Basic user workflow")
+async def enterprise_workflow(context):
+    print("🏢 Enterprise features enabled")
+    context.set_variable("features", ["all_premium", "dedicated_support", "custom_integrations"])
+    return "send_welcome"
+
+async def basic_workflow(context):
+    print("👋 Basic features enabled")
     context.set_variable("features", ["basic_analytics"])
     return "send_welcome"
 
 async def send_welcome(context):
-    user_type = context.get_variable("user_type")
     features = context.get_variable("features")
-    print(f"✉️ Welcome {user_type} user! Features: {', '.join(features)}")
+    print(f"✉️ Welcome! Your features: {', '.join(features)}")
 
-# Add all states
+# Only check_user_type runs first, then routing happens
 agent.add_state("check_user_type", check_user_type)
-agent.add_state("premium_flow", premium_flow)
-agent.add_state("basic_flow", basic_flow)
+agent.add_state("premium_workflow", premium_workflow)
+agent.add_state("enterprise_workflow", enterprise_workflow) 
+agent.add_state("basic_workflow", basic_workflow)
 agent.add_state("send_welcome", send_welcome)
+
+# Set user type before running
+agent.set_variable("user_type", "premium")
 \`\`\`
 
-### Parallel Execution
+### 3. ⚡ Parallel Execution: "Do multiple things at once"
 
-Return a list of state names to run multiple states at once:
+Return a list of state names to run multiple states simultaneously:
 
 \`\`\`python
+agent = Agent("parallel-processing")
+
 async def process_order(context):
     print("📦 Processing order...")
-    context.set_variable("order_id", "ORD-123")
-
-    # Run these three states in parallel
+    order_id = "ORD-123"
+    context.set_variable("order_id", order_id)
+    
+    # Run these three states in parallel - much faster!
     return ["send_confirmation", "update_inventory", "charge_payment"]
 
 async def send_confirmation(context):
     order_id = context.get_variable("order_id")
     print(f"📧 Confirmation sent for {order_id}")
+    context.set_variable("confirmation_sent", True)
 
 async def update_inventory(context):
     print("📋 Inventory updated")
+    context.set_variable("inventory_updated", True)
 
 async def charge_payment(context):
     order_id = context.get_variable("order_id")
     print(f"💳 Payment processed for {order_id}")
+    context.set_variable("payment_charged", True)
+
+agent.add_state("process_order", process_order)
+agent.add_state("send_confirmation", send_confirmation)
+agent.add_state("update_inventory", update_inventory)
+agent.add_state("charge_payment", charge_payment)
+
+# Runs: process_order → [send_confirmation + update_inventory + charge_payment]
 \`\`\`
 
-## Complete Example: Data Pipeline
+### 🎯 Quick Reference: Return Values
 
 \`\`\`python
-import asyncio
-from puffinflow import Agent
-
-agent = Agent("data-pipeline")
-
-async def extract(context):
-    data = {"sales": [100, 200, 150], "customers": ["Alice", "Bob", "Charlie"]}
-    context.set_variable("raw_data", data)
-    print("✅ Data extracted")
-
-async def transform(context):
-    raw_data = context.get_variable("raw_data")
-    total_sales = sum(raw_data["sales"])
-    customer_count = len(raw_data["customers"])
-
-    transformed = {
-        "total_sales": total_sales,
-        "customer_count": customer_count,
-        "avg_sale": total_sales / customer_count
-    }
-
-    context.set_variable("processed_data", transformed)
-    print("✅ Data transformed")
-
-async def load(context):
-    processed_data = context.get_variable("processed_data")
-    print(f"✅ Saved: {processed_data}")
-
-# Set up the pipeline - runs sequentially
-agent.add_state("extract", extract)
-agent.add_state("transform", transform, dependencies=["extract"])
-agent.add_state("load", load, dependencies=["transform"])
-
-if __name__ == "__main__":
-    asyncio.run(agent.run())
+async def my_state(context):
+    # Control what happens next:
+    return None                    # End workflow OR continue to next state
+    return "next_state"           # Jump to specific state
+    return ["state1", "state2"]   # Run multiple states in parallel
 \`\`\`
 
-## When to Use the Decorator
+## 🚀 Real-World Example: Complete ETL Pipeline
 
-Add the \`@state\` decorator when you need advanced features later:
-
-\`\`\`python
-from puffinflow import state, Priority
-
-# Advanced features example (you don't need this initially)
-@state(cpu=2.0, memory=1024, priority=Priority.HIGH, timeout=60.0)
-async def intensive_task(context):
-    # This state gets 2 CPU units, 1GB memory, high priority, 60s timeout
-    pass
-\`\`\`
-
-## Quick Reference
-
-### Flow Control Methods
-\`\`\`python
-# Sequential (default)
-agent.add_state("first", first_function)
-agent.add_state("second", second_function)
-
-# Dependencies
-agent.add_state("dependent", function, dependencies=["first", "second"])
-
-# Dynamic routing
-async def router(context):
-    return "next_state"           # Single state
-    return ["state1", "state2"]   # Parallel states
-\`\`\`
-
-### Context Methods
-- \`context.set_variable(key, value)\` - Store data
-- \`context.get_variable(key)\` - Retrieve data
-
-### State Return Values
-- \`None\` - Continue normally
-- \`"state_name"\` - Run specific state next
-- \`["state1", "state2"]\` - Run multiple states in parallel
-
-## 🤖 Complete AI Workflow Example
-
-Here's a real-world example showing how to build an AI research assistant that:
-1. Takes a query
-2. Searches for information
-3. Analyzes findings with an LLM
-4. Generates a final report
+Let's build a realistic data processing pipeline that you might use in production:
 
 \`\`\`python
 import asyncio
 import json
-from puffinflow import Agent
+from typing import Dict, List
+from puffinflow import Agent, state
 
-# Simulate external APIs
-async def search_web(query):
-    """Simulate web search API"""
-    await asyncio.sleep(0.2)
-    return [
-        {"title": f"Article about {query}", "content": f"Detailed info on {query}..."},
-        {"title": f"{query} trends", "content": f"Latest trends in {query}..."}
+# Create our ETL pipeline agent
+etl_pipeline = Agent("production-etl")
+
+async def extract_data(context):
+    """Extract data from multiple sources."""
+    print("🔌 Extracting data from sources...")
+    
+    # Simulate extracting from different sources
+    user_data = [
+        {"id": 1, "name": "Alice", "email": "alice@example.com", "purchases": 5},
+        {"id": 2, "name": "Bob", "email": "bob@example.com", "purchases": 3},
+        {"id": 3, "name": "Charlie", "email": "charlie@example.com", "purchases": 8}
     ]
+    
+    sales_data = [
+        {"user_id": 1, "amount": 120.50, "product": "Widget A"},
+        {"user_id": 2, "amount": 75.25, "product": "Widget B"},
+        {"user_id": 1, "amount": 200.00, "product": "Widget C"},
+        {"user_id": 3, "amount": 99.99, "product": "Widget A"}
+    ]
+    
+    # Store extracted data
+    context.set_variable("user_data", user_data)
+    context.set_variable("sales_data", sales_data)
+    
+    print(f"✅ Extracted {len(user_data)} users and {len(sales_data)} sales records")
 
-async def call_llm(prompt):
-    """Simulate LLM API call"""
-    await asyncio.sleep(0.5)
-    return f"AI Analysis: {prompt[:50]}..."
-
-# Create the research agent
-research_agent = Agent("ai-research-assistant")
-
-async def validate_query(context):
-    """Validate and prepare the search query"""
-    query = context.get_variable("search_query", "")
-
-    if not query or len(query) < 3:
-        print("❌ Invalid query - too short")
-        return None  # End workflow
-
-    # Clean and prepare query
-    clean_query = query.strip().lower()
-    context.set_variable("clean_query", clean_query)
-
-    print(f"✅ Query validated: '{clean_query}'")
-    return "search_information"
-
-async def search_information(context):
-    """Search for information on the web"""
-    query = context.get_variable("clean_query")
-
-    print(f"🔍 Searching for: {query}")
-    results = await search_web(query)
-
-    context.set_variable("search_results", results)
-    print(f"✅ Found {len(results)} results")
-
-    return "analyze_results"
-
-async def analyze_results(context):
-    """Use LLM to analyze search results"""
-    results = context.get_variable("search_results")
-    query = context.get_variable("clean_query")
-
-    print("🧠 Analyzing results with AI...")
-
-    # Prepare prompt for LLM
-    prompt = f"""
-    Analyze these search results for query '{query}':
-    {json.dumps(results, indent=2)}
-
-    Provide key insights and trends.
-    """
-
-    analysis = await call_llm(prompt)
-    context.set_variable("analysis", analysis)
-
-    print("✅ Analysis complete")
-    return "generate_report"
-
-async def generate_report(context):
-    """Generate final research report"""
-    query = context.get_variable("search_query")
-    analysis = context.get_variable("analysis")
-    results = context.get_variable("search_results")
-
-    print("📝 Generating final report...")
-
-    # Create structured report
-    report = {
-        "query": query,
-        "sources_found": len(results),
-        "analysis": analysis,
-        "generated_at": "2024-01-15 10:30:00",
-        "confidence": "high"
+@state(cpu=2.0, memory=1024)  # This transformation needs more resources
+async def transform_data(context):
+    """Transform and enrich the data."""
+    print("🔄 Transforming data...")
+    
+    users = context.get_variable("user_data")
+    sales = context.get_variable("sales_data")
+    
+    # Transform: Calculate total revenue per user
+    user_revenue = {}
+    for sale in sales:
+        user_id = sale["user_id"]
+        user_revenue[user_id] = user_revenue.get(user_id, 0) + sale["amount"]
+    
+    # Enrich: Combine user data with their revenue
+    enriched_users = []
+    for user in users:
+        enriched_user = {
+            **user,
+            "total_revenue": user_revenue.get(user["id"], 0),
+            "avg_purchase_value": user_revenue.get(user["id"], 0) / max(user["purchases"], 1)
+        }
+        enriched_users.append(enriched_user)
+    
+    # Calculate summary metrics
+    summary = {
+        "total_users": len(enriched_users),
+        "total_revenue": sum(user_revenue.values()),
+        "avg_revenue_per_user": sum(user_revenue.values()) / len(enriched_users),
+        "top_customer": max(enriched_users, key=lambda x: x["total_revenue"])["name"]
     }
+    
+    context.set_variable("enriched_users", enriched_users)
+    context.set_variable("summary_metrics", summary)
+    
+    print(f"✅ Transformed data: {summary['total_users']} users, \${summary['total_revenue']:.2f} total revenue")
 
-    context.set_variable("final_report", report)
+async def validate_data(context):
+    """Validate the transformed data meets quality standards."""
+    print("🔍 Validating data quality...")
+    
+    enriched_users = context.get_variable("enriched_users")
+    
+    # Quality checks
+    issues = []
+    
+    for user in enriched_users:
+        if not user.get("email") or "@" not in user["email"]:
+            issues.append(f"Invalid email for user {user['name']}")
+        
+        if user["total_revenue"] < 0:
+            issues.append(f"Negative revenue for user {user['name']}")
+    
+    if issues:
+        print(f"❌ Data quality issues found: {issues}")
+        context.set_variable("validation_errors", issues)
+        return "handle_errors"
+    
+    context.set_variable("data_validated", True)
+    print("✅ Data validation passed!")
+    return "load_data"
 
-    print("🎉 Research Report Generated!")
-    print(f"Query: {report['query']}")
-    print(f"Sources: {report['sources_found']}")
-    print(f"Analysis: {report['analysis']}")
+async def load_data(context):
+    """Load data to destination (database, warehouse, etc.)."""
+    print("💾 Loading data to destination...")
+    
+    enriched_users = context.get_variable("enriched_users")
+    summary = context.get_variable("summary_metrics")
+    
+    # Simulate loading to database/data warehouse
+    # In real life, this would connect to your actual data store
+    print(f"Saving {len(enriched_users)} enriched user records...")
+    print(f"Saving summary metrics: {summary}")
+    
+    context.set_variable("load_completed", True)
+    context.set_variable("records_loaded", len(enriched_users))
+    
+    print("✅ Data loading completed successfully!")
 
-    return None  # End workflow
+async def handle_errors(context):
+    """Handle any data quality issues."""
+    errors = context.get_variable("validation_errors", [])
+    print(f"🚨 Handling {len(errors)} data quality issues:")
+    
+    for error in errors:
+        print(f"  - {error}")
+    
+    # In production, you might:
+    # - Send alerts to data team
+    # - Log to monitoring system  
+    # - Attempt data repair
+    # - Skip problematic records
+    
+    context.set_variable("errors_handled", True)
+    print("⚠️ Error handling completed")
 
-# Wire up the workflow
-research_agent.add_state("validate_query", validate_query)
-research_agent.add_state("search_information", search_information)
-research_agent.add_state("analyze_results", analyze_results)
-research_agent.add_state("generate_report", generate_report)
+# Wire up the ETL pipeline
+etl_pipeline.add_state("extract_data", extract_data)
+etl_pipeline.add_state("transform_data", transform_data, dependencies=["extract_data"])
+etl_pipeline.add_state("validate_data", validate_data, dependencies=["transform_data"])
+etl_pipeline.add_state("load_data", load_data)
+etl_pipeline.add_state("handle_errors", handle_errors)
 
-async def run_research(query):
-    """Run a complete research workflow"""
-    print(f"🚀 Starting research on: '{query}'")
-    print("-" * 50)
+async def run_etl():
+    """Run the complete ETL pipeline."""
+    print("🚀 Starting ETL Pipeline")
+    print("=" * 50)
+    
+    result = await etl_pipeline.run()
+    
+    print("=" * 50)
+    if result.get_variable("load_completed"):
+        records = result.get_variable("records_loaded")
+        print(f"✨ ETL Pipeline completed successfully! Loaded {records} records.")
+    else:
+        print("❌ ETL Pipeline failed - check errors above")
+    
+    return result
 
-    # Set initial context
-    research_agent.set_variable("search_query", query)
-
-    result = await research_agent.run()
-
-    print("-" * 50)
-    print("✨ Research complete!")
-
-    return result.get_variable("final_report")
-
-# Example usage
 if __name__ == "__main__":
-    report = asyncio.run(run_research("machine learning trends 2024"))
-    print(f"\\nFinal report available in context: {report is not None}")
+    result = asyncio.run(run_etl())
 \`\`\`
 
 **Expected Output:**
 \`\`\`
-🚀 Starting research on: 'machine learning trends 2024'
---------------------------------------------------
-✅ Query validated: 'machine learning trends 2024'
-🔍 Searching for: machine learning trends 2024
-✅ Found 2 results
-🧠 Analyzing results with AI...
-✅ Analysis complete
-📝 Generating final report...
-🎉 Research Report Generated!
-Query: machine learning trends 2024
-Sources: 2
-Analysis: AI Analysis: Analyze these search results for query 'machine...
---------------------------------------------------
-✨ Research complete!
-
-Final report available in context: True
+🚀 Starting ETL Pipeline
+==================================================
+🔌 Extracting data from sources...
+✅ Extracted 3 users and 4 sales records
+🔄 Transforming data...
+✅ Transformed data: 3 users, $495.74 total revenue
+🔍 Validating data quality...
+✅ Data validation passed!
+💾 Loading data to destination...
+Saving 3 enriched user records...
+Saving summary metrics: {'total_users': 3, 'total_revenue': 495.74, ...}
+✅ Data loading completed successfully!
+==================================================
+✨ ETL Pipeline completed successfully! Loaded 3 records.
 \`\`\`
 
-## 🚀 Real-World Production Example
+## Production Features with @state Decorator
 
-Here's a complete example of a production-ready document processing workflow:
+When you're ready for production, add the \`@state\` decorator for advanced features:
+
+\`\`\`python
+from puffinflow import state
+
+@state(
+    cpu=2.0,           # Reserve 2 CPU cores
+    memory=1024,       # Reserve 1GB memory  
+    timeout=60.0,      # Timeout after 60 seconds
+    max_retries=3,     # Retry up to 3 times on failure
+    priority="high"    # High priority execution
+)
+async def production_task(context):
+    # This state gets guaranteed resources and reliability features
+    # Perfect for critical production workloads
+    pass
+\`\`\`
+
+## 📋 Quick Reference Guide
+
+### 🔧 Adding States
+\`\`\`python
+# Simple: states run in order added
+agent.add_state("first", first_function)
+agent.add_state("second", second_function)
+
+# With dependencies: wait for others to complete
+agent.add_state("reporter", generate_report, 
+               dependencies=["fetch_users", "fetch_sales"])
+\`\`\`
+
+### 📦 Context Operations
+\`\`\`python
+# Store data (any Python object)
+context.set_variable("users", user_list)
+context.set_variable("total", 42.5)
+
+# Retrieve data (with optional defaults)
+users = context.get_variable("users")
+total = context.get_variable("total", 0.0)
+\`\`\`
+
+### 🎯 State Return Values
+\`\`\`python
+async def my_state(context):
+    return None                    # Continue to next state or end
+    return "specific_state"        # Jump to named state
+    return ["state1", "state2"]    # Run multiple states in parallel
+\`\`\`
+
+## 🤖 Real-World AI Example: Smart Document Processor
+
+Here's a production-ready AI workflow that processes documents with modern LLM integration:
 
 \`\`\`python
 import asyncio
-import logging
-from pathlib import Path
-from puffinflow import Agent, state, Priority
-from puffinflow.observability import MetricsCollector
-from puffinflow.utils import save_checkpoint
+from typing import Dict, List
+from puffinflow import Agent, state
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Modern AI document processor
+ai_processor = Agent("ai-document-processor")
 
-# Initialize metrics
-metrics = MetricsCollector(namespace="document_processor")
-
-# Create production agent
-processor = Agent("document-processor")
-
-@state(
-    cpu=2.0,
-    memory=1024,
-    priority=Priority.HIGH,
-    max_retries=3,
-    timeout=120.0
-)
+@state(timeout=30.0, max_retries=2)
 async def validate_document(context):
-    """Validate uploaded document format and size."""
-    logger.info("Starting document validation")
-    metrics.increment("validation_started")
-
-    try:
-        file_path = context.get_variable("file_path")
-        file_size = Path(file_path).stat().st_size
-
-        # Validate file size (max 10MB)
-        if file_size > 10 * 1024 * 1024:
-            context.set_variable("error", "File too large")
-            metrics.increment("validation_failed", tags={"reason": "file_size"})
-            return "error_handler"
-
-        # Validate file format
-        if not file_path.lower().endswith(('.pdf', '.docx', '.txt')):
-            context.set_variable("error", "Unsupported file format")
-            metrics.increment("validation_failed", tags={"reason": "format"})
-            return "error_handler"
-
-        context.set_variable("file_size", file_size)
-        logger.info(f"Document validated: {file_size} bytes")
-        metrics.increment("validation_succeeded")
-
-        return "extract_content"
-
-    except Exception as e:
-        logger.error(f"Validation error: {e}")
-        context.set_variable("error", str(e))
-        metrics.increment("validation_failed", tags={"reason": "exception"})
+    """Validate uploaded document."""
+    doc_path = context.get_variable("document_path")
+    
+    if not doc_path or not doc_path.endswith(('.pdf', '.txt', '.docx')):
+        context.set_variable("error", "Invalid document format")
         return "error_handler"
+    
+    print(f"✅ Document validated: {doc_path}")
+    context.set_variable("validated", True)
+    return "extract_content"
 
-@state(
-    cpu=4.0,
-    memory=2048,
-    priority=Priority.NORMAL,
-    max_retries=2,
-    timeout=300.0
-)
+@state(cpu=2.0, memory=1024, timeout=120.0)
 async def extract_content(context):
     """Extract text content from document."""
-    logger.info("Starting content extraction")
-    metrics.increment("extraction_started")
+    doc_path = context.get_variable("document_path")
+    
+    print(f"📄 Extracting content from {doc_path}...")
+    
+    # Simulate content extraction (use pypdf, python-docx, etc. in real code)
+    if doc_path.endswith('.pdf'):
+        content = "This is extracted PDF content about quarterly sales results..."
+    elif doc_path.endswith('.txt'):
+        content = "This is plain text content about market analysis..."
+    else:
+        content = "This is Word document content about product roadmap..."
+    
+    context.set_variable("raw_content", content)
+    context.set_variable("word_count", len(content.split()))
+    
+    print(f"✅ Extracted {len(content.split())} words")
+    return "analyze_with_ai"
 
-    with metrics.timer("extraction_time"):
-        try:
-            file_path = context.get_variable("file_path")
+@state(cpu=1.0, memory=512, timeout=60.0, max_retries=3)
+async def analyze_with_ai(context):
+    """Analyze content using LLM."""
+    content = context.get_variable("raw_content")
+    
+    print("🧠 Analyzing content with AI...")
+    
+    # Simulate LLM API call (use OpenAI, Anthropic, etc. in real code)
+    # In production, you'd send content to your preferred LLM
+    await asyncio.sleep(1)  # Simulate API latency
+    
+    # Mock AI analysis results
+    ai_analysis = {
+        "summary": "Document discusses Q3 sales performance with focus on regional growth.",
+        "key_topics": ["sales", "quarterly results", "regional performance", "growth metrics"],
+        "sentiment": "positive",
+        "confidence": 0.92,
+        "word_count": context.get_variable("word_count"),
+        "reading_time": context.get_variable("word_count") // 200  # ~200 words per minute
+    }
+    
+    context.set_variable("ai_analysis", ai_analysis)
+    print(f"✅ AI analysis complete - {ai_analysis['sentiment']} sentiment")
+    
+    # Route based on content type
+    if "sales" in ai_analysis["key_topics"]:
+        return "process_sales_document"
+    elif "roadmap" in ai_analysis["key_topics"]:
+        return "process_roadmap_document"
+    else:
+        return "process_general_document"
 
-            # Simulate content extraction
-            await asyncio.sleep(2)  # Replace with actual extraction
+async def process_sales_document(context):
+    """Specialized processing for sales documents."""
+    analysis = context.get_variable("ai_analysis")
+    
+    print("📊 Processing sales document...")
+    
+    # Sales-specific processing
+    sales_insights = {
+        "document_type": "sales_report",
+        "key_metrics": ["revenue", "growth_rate", "regional_performance"],
+        "stakeholders": ["sales_team", "executives", "finance"],
+        "action_items": ["Follow up on regional growth", "Prepare executive summary"]
+    }
+    
+    context.set_variable("specialized_insights", sales_insights)
+    print("✅ Sales document processing complete")
+    return "generate_final_report"
 
-            content = f"Extracted content from {file_path}"
-            word_count = len(content.split())
+async def process_roadmap_document(context):
+    """Specialized processing for roadmap documents."""
+    print("🗺️ Processing roadmap document...")
+    
+    roadmap_insights = {
+        "document_type": "product_roadmap",
+        "key_metrics": ["timeline", "features", "milestones"],
+        "stakeholders": ["product_team", "engineering", "design"],
+        "action_items": ["Review feature priorities", "Update timeline estimates"]
+    }
+    
+    context.set_variable("specialized_insights", roadmap_insights)
+    print("✅ Roadmap document processing complete")
+    return "generate_final_report"
 
-            context.set_variable("content", content)
-            context.set_variable("word_count", word_count)
+async def process_general_document(context):
+    """General processing for other document types."""
+    print("📋 Processing general document...")
+    
+    general_insights = {
+        "document_type": "general",
+        "key_metrics": ["content_quality", "readability"],
+        "stakeholders": ["general_audience"],
+        "action_items": ["Review content", "Categorize document"]
+    }
+    
+    context.set_variable("specialized_insights", general_insights)
+    print("✅ General document processing complete")
+    return "generate_final_report"
 
-            logger.info(f"Content extracted: {word_count} words")
-            metrics.gauge("content_word_count", word_count)
-            metrics.increment("extraction_succeeded")
+async def generate_final_report(context):
+    """Generate comprehensive analysis report."""
+    print("📑 Generating final report...")
+    
+    ai_analysis = context.get_variable("ai_analysis")
+    specialized = context.get_variable("specialized_insights")
+    doc_path = context.get_variable("document_path")
+    
+    final_report = {
+        "document": doc_path,
+        "processing_timestamp": "2024-01-15T10:30:00Z",
+        "ai_analysis": ai_analysis,
+        "specialized_processing": specialized,
+        "recommendations": [
+            f"Document type: {specialized['document_type']}",
+            f"Estimated reading time: {ai_analysis['reading_time']} minutes",
+            f"Confidence score: {ai_analysis['confidence']:.2%}"
+        ]
+    }
+    
+    context.set_variable("final_report", final_report)
+    
+    print("🎉 Document processing complete!")
+    print(f"📄 Type: {specialized['document_type']}")
+    print(f"🎯 Confidence: {ai_analysis['confidence']:.2%}")
+    print(f"⏱️ Reading time: {ai_analysis['reading_time']} minutes")
 
-            return "analyze_content"
-
-        except Exception as e:
-            logger.error(f"Extraction error: {e}")
-            context.set_variable("error", str(e))
-            metrics.increment("extraction_failed")
-            return "error_handler"
-
-@state(
-    cpu=2.0,
-    memory=1024,
-    priority=Priority.NORMAL,
-    max_retries=1,
-    timeout=180.0
-)
-async def analyze_content(context):
-    """Analyze content with AI/ML processing."""
-    logger.info("Starting content analysis")
-    metrics.increment("analysis_started")
-
-    with metrics.timer("analysis_time"):
-        try:
-            content = context.get_variable("content")
-            word_count = context.get_variable("word_count")
-
-            # Simulate AI analysis
-            await asyncio.sleep(1)  # Replace with actual AI processing
-
-            analysis = {
-                "sentiment": "positive",
-                "topics": ["technology", "business"],
-                "summary": f"Document contains {word_count} words about technology and business.",
-                "confidence": 0.95
-            }
-
-            context.set_variable("analysis", analysis)
-            logger.info(f"Analysis complete: {analysis['sentiment']} sentiment")
-            metrics.gauge("analysis_confidence", analysis["confidence"])
-            metrics.increment("analysis_succeeded")
-
-            return "save_results"
-
-        except Exception as e:
-            logger.error(f"Analysis error: {e}")
-            context.set_variable("error", str(e))
-            metrics.increment("analysis_failed")
-            return "error_handler"
-
-@state(
-    cpu=1.0,
-    memory=512,
-    priority=Priority.NORMAL,
-    max_retries=2,
-    timeout=60.0
-)
-async def save_results(context):
-    """Save processing results to database."""
-    logger.info("Saving results")
-    metrics.increment("save_started")
-
-    try:
-        analysis = context.get_variable("analysis")
-        file_path = context.get_variable("file_path")
-
-        # Simulate database save
-        await asyncio.sleep(0.5)  # Replace with actual database operation
-
-        result_id = f"doc_{hash(file_path)}"
-        results = {
-            "id": result_id,
-            "file_path": file_path,
-            "analysis": analysis,
-            "processed_at": "2024-01-15T10:30:00Z"
-        }
-
-        context.set_variable("results", results)
-        logger.info(f"Results saved with ID: {result_id}")
-        metrics.increment("save_succeeded")
-
-        return "send_notification"
-
-    except Exception as e:
-        logger.error(f"Save error: {e}")
-        context.set_variable("error", str(e))
-        metrics.increment("save_failed")
-        return "error_handler"
-
-@state(
-    cpu=0.5,
-    memory=256,
-    priority=Priority.LOW,
-    max_retries=3,
-    timeout=30.0
-)
-async def send_notification(context):
-    """Send completion notification."""
-    logger.info("Sending notification")
-    metrics.increment("notification_started")
-
-    try:
-        results = context.get_variable("results")
-
-        # Simulate notification
-        await asyncio.sleep(0.2)  # Replace with actual notification service
-
-        notification = {
-            "type": "success",
-            "message": f"Document {results['id']} processed successfully",
-            "timestamp": "2024-01-15T10:35:00Z"
-        }
-
-        context.set_variable("notification", notification)
-        logger.info("Notification sent successfully")
-        metrics.increment("notification_succeeded")
-
-        return None  # End workflow
-
-    except Exception as e:
-        logger.error(f"Notification error: {e}")
-        context.set_variable("error", str(e))
-        metrics.increment("notification_failed")
-        return "error_handler"
-
-@state(
-    cpu=0.5,
-    memory=256,
-    priority=Priority.HIGH,
-    max_retries=1,
-    timeout=30.0
-)
 async def error_handler(context):
-    """Handle errors and cleanup."""
-    logger.error("Handling workflow error")
-    metrics.increment("error_handled")
+    """Handle processing errors gracefully."""
+    error = context.get_variable("error", "Unknown error")
+    print(f"❌ Error: {error}")
+    
+    context.set_variable("processing_failed", True)
+    # In production: log error, send alerts, cleanup resources
 
-    try:
-        error = context.get_variable("error")
-        file_path = context.get_variable("file_path", "unknown")
+# Wire up the AI workflow
+ai_processor.add_state("validate_document", validate_document)
+ai_processor.add_state("extract_content", extract_content)
+ai_processor.add_state("analyze_with_ai", analyze_with_ai)
+ai_processor.add_state("process_sales_document", process_sales_document)
+ai_processor.add_state("process_roadmap_document", process_roadmap_document)
+ai_processor.add_state("process_general_document", process_general_document)
+ai_processor.add_state("generate_final_report", generate_final_report)
+ai_processor.add_state("error_handler", error_handler)
 
-        # Log error details
-        logger.error(f"Workflow failed for {file_path}: {error}")
-
-        # Cleanup resources
-        await cleanup_resources(file_path)
-
-        # Send error notification
-        error_notification = {
-            "type": "error",
-            "message": f"Document processing failed: {error}",
-            "file_path": file_path,
-            "timestamp": "2024-01-15T10:30:00Z"
-        }
-
-        context.set_variable("error_notification", error_notification)
-        logger.info("Error handling completed")
-
-        return None  # End workflow
-
-    except Exception as e:
-        logger.critical(f"Error handler failed: {e}")
-        metrics.increment("error_handler_failed")
+async def process_document(doc_path: str):
+    """Process a document with AI analysis."""
+    print(f"🚀 Processing document: {doc_path}")
+    print("=" * 60)
+    
+    # Set initial context
+    ai_processor.set_variable("document_path", doc_path)
+    
+    result = await ai_processor.run()
+    
+    print("=" * 60)
+    
+    if result.get_variable("processing_failed"):
+        print("❌ Document processing failed")
         return None
-
-async def cleanup_resources(file_path):
-    """Cleanup any allocated resources."""
-    logger.info(f"Cleaning up resources for {file_path}")
-    # Add cleanup logic here
-    pass
+    else:
+        print("✨ Document processing successful!")
+        return result.get_variable("final_report")
 
 # Example usage
-async def process_document(file_path: str):
-    """Process a document through the complete workflow."""
-    logger.info(f"Starting document processing: {file_path}")
-
-    try:
-        # Run workflow with error handling
-        context = await processor.run(
-            initial_context={"file_path": file_path}
-        )
-
-        # Save checkpoint periodically
-        save_checkpoint(context, f"checkpoint_{hash(file_path)}.json")
-
-        # Check results
-        if context.has_variable("results"):
-            results = context.get_variable("results")
-            logger.info(f"Processing completed successfully: {results['id']}")
-            return results
-        else:
-            error = context.get_variable("error", "Unknown error")
-            logger.error(f"Processing failed: {error}")
-            return None
-
-    except Exception as e:
-        logger.critical(f"Workflow execution failed: {e}")
-        metrics.increment("workflow_failed")
-        return None
-
-# Production usage
 if __name__ == "__main__":
-    # Process multiple documents
+    # Process different document types
     documents = [
-        "/path/to/document1.pdf",
-        "/path/to/document2.docx",
-        "/path/to/document3.txt"
+        "quarterly_sales_report.pdf",
+        "product_roadmap_2024.docx", 
+        "meeting_notes.txt"
     ]
-
+    
     async def main():
-        tasks = []
         for doc in documents:
-            task = asyncio.create_task(process_document(doc))
-            tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Summary
-        successful = sum(1 for r in results if r is not None and not isinstance(r, Exception))
-        logger.info(f"Processed {successful}/{len(documents)} documents successfully")
-
+            report = await process_document(doc)
+            if report:
+                print(f"✅ {doc} processed successfully\\n")
+            else:
+                print(f"❌ {doc} processing failed\\n")
+    
     asyncio.run(main())
 \`\`\`
 
-This example demonstrates:
-- **Production-ready error handling** with retry logic and cleanup
-- **Comprehensive monitoring** with metrics and logging
-- **Resource management** with appropriate CPU/memory allocation
-- **Prioritization** of critical vs. background tasks
-- **Fault tolerance** with checkpointing and recovery
-- **Concurrent processing** of multiple documents
+This example shows:
+- **🔄 Smart routing** based on AI analysis results  
+- **⚡ Resource management** with CPU/memory limits
+- **🛡️ Error handling** with retries and timeouts
+- **🎯 Specialized processing** for different document types
+- **📊 Real-world patterns** you'd use in production
 
-## 📚 Common Patterns and Best Practices
+## 🎯 What's Next?
 
-### 1. **Error Handling Pattern**
+You now have the fundamentals to build powerful workflows! Here's your learning path:
 
-\`\`\`python
-@state(max_retries=3, timeout=60.0)
-async def robust_state(context):
-    try:
-        # Your business logic
-        result = await risky_operation()
-        context.set_variable("result", result)
-        return "success_state"
-    except SpecificError as e:
-        logger.warning(f"Recoverable error: {e}")
-        context.set_variable("retry_count", context.get_state("retry_count", 0) + 1)
-        return "retry_state"
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
-        context.set_variable("error", str(e))
-        return "error_handler"
-\`\`\`
+### 🚀 **Keep Building**
+- Start with simple workflows and gradually add complexity
+- Use dependencies for parallel processing where possible  
+- Add the \`@state\` decorator when you need production features
 
-### 2. **Data Validation Pattern**
+### 📚 **Explore Advanced Features**
+- **[Error Handling & Retries →](/docs/error-handling)** - Make your workflows bulletproof
+- **[Resource Management →](/docs/resource-management)** - Control CPU, memory, and priorities  
+- **[Observability →](/docs/observability)** - Monitor and debug with metrics and tracing
+- **[Multi-Agent Coordination →](/docs/coordination)** - Build distributed systems
 
-\`\`\`python
-from pydantic import BaseModel, ValidationError
+### 🔧 **Production Ready**
+- **[Deployment Guide →](/docs/deployment)** - Deploy to cloud platforms
+- **[Best Practices →](/docs/best-practices)** - Patterns for production workflows
+- **[Troubleshooting →](/docs/troubleshooting)** - Debug common issues
 
-class InputData(BaseModel):
-    user_id: int
-    email: str
-    preferences: dict
+### 💡 **Need Help?**
+- Check out the **[Examples](https://github.com/puffinflow/examples)** repository
+- Join our **[Community Discord](https://discord.gg/puffinflow)**
+- Read the **[API Reference →](/docs/api-reference)** for complete documentation
 
-@state
-async def validate_input(context):
-    try:
-        raw_data = context.get_variable("raw_input")
-        validated_data = InputData(**raw_data)
-        context.set_validated_data("input", validated_data)
-        return "process_data"
-    except ValidationError as e:
-        context.set_variable("validation_errors", e.errors())
-        return "validation_error"
-\`\`\`
+## 🌟 Common Use Cases
 
-### 3. **Resource Optimization Pattern**
+**Perfect for:**
+- 🤖 **AI/LLM workflows** - RAG systems, document processing, chatbots
+- 📊 **Data pipelines** - ETL, analytics, reporting workflows
+- 🔄 **Microservice orchestration** - Service coordination, saga patterns
+- 🏗️ **DevOps automation** - CI/CD pipelines, infrastructure workflows
+- 🎯 **Business processes** - Approval workflows, order processing
 
-\`\`\`python
-@state(cpu=0.5, memory=256, priority=Priority.LOW)
-async def lightweight_task(context):
-    # Light processing
-    return "next_state"
-
-@state(cpu=4.0, memory=2048, priority=Priority.HIGH)
-async def heavy_task(context):
-    # CPU/memory intensive processing
-    return "next_state"
-\`\`\`
-
-### 4. **Monitoring Pattern**
-
-\`\`\`python
-from puffinflow.observability import MetricsCollector
-
-metrics = MetricsCollector()
-
-@state
-async def monitored_state(context):
-    metrics.increment("state_executions")
-
-    start_time = time.time()
-    try:
-        with metrics.timer("operation_duration"):
-            result = await business_operation()
-
-        metrics.gauge("result_size", len(result))
-        metrics.increment("successful_operations")
-
-        context.set_variable("result", result)
-        return "next_state"
-    except Exception as e:
-        metrics.increment("failed_operations")
-        raise
-\`\`\`
-
-## 🎯 Next Steps
-
-You now know the fundamentals! Here's what to explore next:
-
-1. **[Context and Data →](#docs/context-and-data)** - Deep dive into data management and validation
-2. **[Resource Management →](#docs/resource-management)** - Control CPU, memory, and rate limits
-3. **[Error Handling →](#docs/error-handling)** - Build resilient workflows with retries and circuit breakers
-4. **[Checkpointing →](#docs/checkpointing)** - Save and resume progress for long-running workflows
-5. **[Observability →](#docs/observability)** - Monitor and debug your workflows in production
-6. **[API Reference →](#docs/api-reference)** - Complete reference for all classes and methods
-7. **[Troubleshooting →](#docs/troubleshooting)** - Solve common issues and debug problems
-
-**Pro tip:** Start simple with basic workflows, then gradually add advanced features as your needs grow! 🌱
+Ready to build something amazing? Start with the examples above and adapt them to your needs! 🚀
 `.trim();
