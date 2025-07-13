@@ -1,218 +1,922 @@
 export const gettingStartedMarkdown = `# Getting Started with Puffinflow
 
-Welcome to **Puffinflow** - the modern Python framework for building reliable, scalable workflows and multi-agent systems! Whether you're orchestrating microservices, building AI pipelines, or managing complex data processing workflows, Puffinflow makes it simple and robust.
+Welcome to **Puffinflow** - the modern Python framework that makes building reliable, scalable workflows and multi-agent systems incredibly simple! Whether you're orchestrating microservices, building AI pipelines, managing complex data processing workflows, or creating sophisticated automation systems, Puffinflow provides the tools you need to build robust, production-ready applications.
 
-## Why Puffinflow?
+## Why Choose Puffinflow?
 
-- **⚡ Simple**: Start with 3 lines of code, scale to production
-- **🔄 Reliable**: Built-in retries, circuit breakers, and error handling
-- **📊 Observable**: Complete monitoring, metrics, and tracing out of the box
-- **⚖️ Scalable**: Resource management, rate limiting, and coordination primitives
-- **🤖 AI-Ready**: Perfect for LLM workflows, RAG systems, and agent orchestration
+Puffinflow was designed from the ground up to solve the common pain points developers face when building complex workflows:
+
+### **⚡ Simple Yet Powerful**
+- Start with just 3 lines of code for basic workflows
+- Scale seamlessly to production-grade systems with thousands of concurrent operations
+- Intuitive API that feels natural to Python developers
+- Zero-configuration setup - works out of the box
+
+### **🔄 Built for Reliability**
+- **Automatic retries** with configurable backoff strategies
+- **Circuit breakers** to prevent cascade failures
+- **Timeout protection** to avoid stuck processes
+- **Dead letter queues** for handling failed operations
+- **Graceful degradation** when services are unavailable
+
+### **📊 Complete Observability**
+- **Real-time metrics** and performance monitoring
+- **Distributed tracing** across your entire workflow
+- **Structured logging** with correlation IDs
+- **Health checks** and alerting
+- **Performance insights** and bottleneck detection
+
+### **⚖️ Enterprise-Grade Scalability**
+- **Resource management** with CPU and memory controls
+- **Rate limiting** to protect downstream services  
+- **Priority queues** for critical operations
+- **Horizontal scaling** across multiple machines
+- **Load balancing** and traffic distribution
+
+### **🤖 AI and ML Ready**
+- Perfect for **LLM workflows** and prompt chains
+- Built-in support for **RAG (Retrieval Augmented Generation)** systems
+- **Multi-agent orchestration** for complex AI systems
+- **Vector database** integration
+- **Model serving** and inference pipelines
 
 ## Prerequisites
 
-- **Python 3.9+** (3.9, 3.10, 3.11, 3.12, 3.13 supported)
-- Basic familiarity with \`async/await\` in Python
-- 5 minutes to get your first workflow running! ⏱️
+Before we start, make sure you have:
 
-## Quick Installation
+- **Python 3.9 or higher** (we support 3.9, 3.10, 3.11, 3.12, and 3.13)
+- **Basic understanding of async/await** in Python (don't worry, we'll explain as we go!)
+- **5 minutes** to get your first workflow running ⏱️
+
+> **New to async/await?** No problem! Puffinflow makes it easy. Just remember that \`async def\` creates an asynchronous function, and \`await\` is used to wait for operations to complete.
+
+## Installation
+
+Install Puffinflow using pip:
 
 \`\`\`bash
 pip install puffinflow
 \`\`\`
 
-## Your First Workflow
+That's it! No complex setup, no configuration files, no additional dependencies to manage.
 
-Create a complete workflow in just **3 simple steps**:
+## Your First Workflow: Hello World
+
+Let's create your first Puffinflow workflow. This example demonstrates the three core concepts you'll use in every workflow:
 
 \`\`\`python
 import asyncio
 from puffinflow import Agent
 
-# 1. Create an agent
+# Step 1: Create an Agent (your workflow container)
+# The Agent manages the execution of your workflow states
 agent = Agent("my-first-workflow")
 
-# 2. Define a state (just a regular async function)
+# Step 2: Define a State (an individual step in your workflow)  
+# States are just regular async functions that receive a 'context' parameter
 async def hello_world(context):
+    # Print a friendly message
     print("Hello, Puffinflow! 🐧")
     print(f"Agent name: {agent.name}")
+    
+    # Store data in context for other states to use
     context.set_variable("greeting", "Hello from PuffinFlow!")
+    context.set_variable("timestamp", "2024-01-15 10:30:00")
+    
+    # Return None to end the workflow, or return a state name to continue
     return None
 
-# 3. Add state and run it
+# Step 3: Register the state with your agent and run the workflow
 agent.add_state("hello_world", hello_world)
 
 async def main():
+    # Run the workflow and get the results
     result = await agent.run()
-    print(f"Result: {result.get_variable('greeting')}")
+    
+    # Access data that was stored in the context
+    greeting = result.get_variable("greeting")
+    timestamp = result.get_variable("timestamp")
+    
+    print(f"Result: {greeting}")
+    print(f"Generated at: {timestamp}")
+    print(f"Workflow status: {result.status}")
 
 if __name__ == "__main__":
     asyncio.run(main())
 \`\`\`
 
-**Output:**
+**When you run this code, you'll see:**
+
 \`\`\`
 Hello, Puffinflow! 🐧
 Agent name: my-first-workflow
 Result: Hello from PuffinFlow!
+Generated at: 2024-01-15 10:30:00
+Workflow status: AgentStatus.COMPLETED
 \`\`\`
 
 🎉 **Congratulations!** You just ran your first Puffinflow workflow!
 
-## Core Concepts
+### **What Just Happened?**
 
-Before diving deeper, let's understand the key concepts:
+Let's break down what happened in this simple example:
 
-### 🏗️ **Agent**: Your Workflow Container
-An Agent is like a container that holds and executes your workflow states. Think of it as your workflow's "brain" that coordinates everything.
+1. **Agent Creation**: \`Agent("my-first-workflow")\` creates a workflow container with a unique name
+2. **State Definition**: The \`hello_world\` function is a state that performs work and stores results
+3. **Context Usage**: The \`context\` parameter lets states share data with each other
+4. **State Registration**: \`add_state()\` tells the agent about your state function
+5. **Execution**: \`agent.run()\` executes the workflow and returns results
+6. **Result Access**: \`result.get_variable()\` retrieves data stored during execution
 
-### 🎯 **State**: Individual Steps  
-States are async functions that represent individual steps in your workflow. They receive a \`context\` parameter to share data and can return the next state to run.
+## Understanding the Core Concepts
 
-### 📦 **Context**: Shared Memory
-The context is how states communicate - it's like a shared memory space where you can store and retrieve variables throughout your workflow.
+Now that you've seen Puffinflow in action, let's dive deeper into the three fundamental concepts that power every workflow:
 
-## Two Ways to Define States
+### 🏗️ **Agent: Your Workflow Orchestrator**
 
-For simple workflows, both approaches work identically:
+An **Agent** is the central coordinator of your workflow. Think of it as a smart container that:
 
-### Plain Functions (Start Here!)
+- **Manages state execution** - Decides which states to run and when
+- **Handles dependencies** - Ensures states run in the correct order
+- **Provides coordination** - Manages parallel execution and synchronization
+- **Tracks progress** - Monitors workflow status and handles errors
+- **Manages resources** - Controls CPU, memory, and other system resources
+
+**Key Agent capabilities:**
+- Execute states sequentially or in parallel
+- Handle complex dependency graphs
+- Provide checkpointing for long-running workflows
+- Support distributed execution across multiple machines
+- Offer built-in monitoring and observability
+
 \`\`\`python
-async def process_data(context):
-    context.set_variable("result", "Hello!")
-    return None  # Continue to next state, or end workflow
+# Creating agents with different configurations
+basic_agent = Agent("data-processor")
+production_agent = Agent("prod-workflow", max_concurrent_states=10)
+distributed_agent = Agent("distributed-ml", enable_checkpointing=True)
 \`\`\`
 
-### With Decorator (For Production Features)
-\`\`\`python
-from puffinflow import state
+### 🎯 **States: The Building Blocks of Your Workflow**
 
-@state(cpu=2.0, memory=1024, timeout=30.0, max_retries=3)
+**States** are the individual steps that make up your workflow. Each state is an async function that:
+
+- **Performs specific work** - Data processing, API calls, computations, etc.
+- **Receives context** - Gets access to shared data and configuration
+- **Can store results** - Saves output for other states to use
+- **Controls flow** - Decides what happens next in the workflow
+- **Handles errors** - Can retry operations or route to error handlers
+
+**State characteristics:**
+- Always async functions (\`async def\`)
+- Always receive a \`context\` parameter as the first argument
+- Can return state names to control workflow routing
+- Can run independently or depend on other states
+- Support timeouts, retries, and resource limits
+
+\`\`\`python
+async def fetch_user_data(context):
+    """Fetch user information from an API."""
+    user_id = context.get_variable("user_id")
+    
+    # Simulate API call
+    user_data = await api_client.get_user(user_id)
+    
+    # Store result for other states
+    context.set_variable("user_data", user_data)
+    
+    # Return the next state to execute
+    return "process_user_data"
+\`\`\`
+
+### 📦 **Context: Your Workflow's Shared Memory**
+
+The **Context** is how states communicate with each other. It's a powerful, type-safe data store that:
+
+- **Shares data** between states throughout the workflow
+- **Maintains state** across the entire workflow execution
+- **Provides type safety** with optional validation
+- **Supports complex data** - Objects, lists, dictionaries, custom classes
+- **Offers caching** with TTL support for expensive operations
+
+**Context features:**
+- Store any Python object (strings, numbers, lists, dictionaries, custom classes)
+- Retrieve data with optional default values
+- Type hints and validation support
+- Built-in caching with expiration
+- Thread-safe for concurrent access
+
+\`\`\`python
+async def example_context_usage(context):
+    # Store different types of data
+    context.set_variable("user_count", 1250)                    # Numbers
+    context.set_variable("user_names", ["Alice", "Bob"])        # Lists  
+    context.set_variable("config", {"timeout": 30, "retries": 3})  # Dictionaries
+    context.set_variable("processed_at", datetime.now())        # Objects
+    
+    # Retrieve data with defaults
+    count = context.get_variable("user_count", 0)
+    names = context.get_variable("user_names", [])
+    timeout = context.get_variable("config", {}).get("timeout", 10)
+    
+    # Data persists throughout the entire workflow
+    return "next_state"
+\`\`\`
+
+## Two Approaches to Defining States
+
+Puffinflow gives you flexibility in how you define states. Both approaches work identically for basic use cases:
+
+### **Approach 1: Plain Functions (Perfect for Getting Started)**
+
+Start with simple async functions when you're learning or building basic workflows:
+
+\`\`\`python
 async def process_data(context):
-    context.set_variable("result", "Hello!")
+    """A simple state function that processes some data."""
+    
+    # Get input data from context
+    raw_data = context.get_variable("raw_data", [])
+    
+    # Process the data
+    processed_data = [item.upper() for item in raw_data]
+    
+    # Store the result
+    context.set_variable("processed_data", processed_data)
+    
+    # Return None to end workflow, or state name to continue
     return None
 \`\`\`
 
-> **When to use decorators?** Start with plain functions. Add the \`@state\` decorator when you need resource limits, timeouts, retries, or priority control. Perfect for production workloads!
+**When to use plain functions:**
+- Learning Puffinflow basics
+- Simple workflows with basic requirements
+- Prototyping and experimentation
+- States that don't need special resource controls
 
-## Sharing Data Between States
+### **Approach 2: Decorated States (Production-Ready Features)**
 
-The **context** is how states communicate with each other. Think of it as a shared memory that persists throughout your workflow:
+Use the \`@state\` decorator when you need advanced production features:
+
+\`\`\`python
+from puffinflow import state
+
+@state(
+    cpu=2.0,           # Reserve 2 CPU cores for this state
+    memory=1024,       # Reserve 1GB of memory
+    timeout=30.0,      # Timeout after 30 seconds
+    max_retries=3,     # Retry up to 3 times on failure
+    priority="high"    # Execute with high priority
+)
+async def process_data(context):
+    """A production-ready state with resource controls."""
+    
+    # This state is guaranteed the requested resources
+    # and will automatically retry on failure
+    
+    raw_data = context.get_variable("raw_data", [])
+    
+    # Simulate CPU-intensive processing
+    processed_data = await expensive_processing(raw_data)
+    
+    context.set_variable("processed_data", processed_data)
+    return None
+\`\`\`
+
+**When to use decorated states:**
+- Production workloads
+- Resource-intensive operations
+- States that need retry logic
+- Operations with timeout requirements
+- High-priority or critical states
+
+### **Decorator Options Explained**
+
+The \`@state\` decorator supports many options for fine-tuning behavior:
+
+\`\`\`python
+@state(
+    # Resource Management
+    cpu=2.0,                    # CPU cores to reserve
+    memory=1024,                # Memory in MB to reserve
+    
+    # Reliability
+    timeout=60.0,               # Timeout in seconds
+    max_retries=3,              # Number of retry attempts
+    retry_delay=1.0,            # Delay between retries (seconds)
+    
+    # Priority and Scheduling  
+    priority="high",            # Execution priority (low/normal/high)
+    
+    # Advanced Options
+    bulkhead="critical",        # Isolate critical operations
+    circuit_breaker=True,       # Enable circuit breaker protection
+    cache_results=True          # Cache results for repeated calls
+)
+async def production_state(context):
+    # Your state logic here
+    pass
+\`\`\`
+
+**Comparison at a glance:**
+
+| Feature | Plain Functions | Decorated States |
+|---------|----------------|------------------|
+| **Simplicity** | ✅ Very simple | ⚠️ Slightly more complex |
+| **Resource Control** | ❌ No | ✅ Full control |
+| **Retry Logic** | ❌ Manual | ✅ Automatic |
+| **Timeouts** | ❌ Manual | ✅ Built-in |
+| **Priority Control** | ❌ No | ✅ Yes |
+| **Production Ready** | ⚠️ Basic | ✅ Enterprise-grade |
+
+**Our recommendation:** Start with plain functions to learn the concepts, then add decorators when you need production features!
+
+## Mastering Data Flow: How States Communicate
+
+One of Puffinflow's most powerful features is seamless data sharing between states. The **Context** acts as your workflow's shared memory, allowing states to pass data, results, and configuration throughout the entire execution.
+
+### **Understanding Context: Your Workflow's Data Hub**
+
+Think of the context as a persistent, intelligent data store that travels with your workflow:
+
+- **Persistent**: Data stored in one state is available to all subsequent states
+- **Type-Safe**: Supports any Python object with optional type validation
+- **Thread-Safe**: Multiple states can safely access context concurrently
+- **Efficient**: Built-in caching and optimization for large datasets
+- **Flexible**: Store simple values or complex objects
+
+### **Complete Data Pipeline Example**
+
+Let's build a realistic business intelligence pipeline that demonstrates how data flows through multiple states:
 
 \`\`\`python
 import asyncio
+from datetime import datetime
 from puffinflow import Agent
 
-agent = Agent("data-pipeline")
+# Create our business intelligence agent
+bi_agent = Agent("business-intelligence-pipeline")
 
-async def fetch_data(context):
-    # Simulate fetching data from an API
-    print("📊 Fetching user data...")
+async def fetch_user_data(context):
+    """Step 1: Fetch user information from our database."""
+    print("📊 Fetching user data from database...")
     
-    # Store data in context - available to all future states
-    context.set_variable("user_count", 1250)
-    context.set_variable("revenue", 45000)
-    print("✅ Data fetched successfully")
-
-async def calculate_metrics(context):
-    # Get data from previous state
-    users = context.get_variable("user_count")
-    revenue = context.get_variable("revenue")
+    # Simulate database query - in real life, this would connect to your DB
+    await asyncio.sleep(0.5)  # Simulate network delay
     
-    # Calculate and store result
-    revenue_per_user = revenue / users
-    context.set_variable("revenue_per_user", revenue_per_user)
+    # Store raw user data in context
+    user_data = {
+        "total_users": 1250,
+        "active_users": 890,
+        "new_signups_today": 45,
+        "countries": ["US", "UK", "DE", "FR", "JP"],
+        "avg_session_time": 342  # seconds
+    }
     
-    print(f"💰 Revenue per user: \${revenue_per_user:.2f}")
-    print("✅ Metrics calculated")
-
-async def send_report(context):
-    # Use the calculated metric
-    rpu = context.get_variable("revenue_per_user")
-    user_count = context.get_variable("user_count")
+    context.set_variable("user_data", user_data)
+    context.set_variable("data_fetch_time", datetime.now())
     
-    print(f"📧 Sending report: {user_count} users, RPU is \${rpu:.2f}")
-    context.set_variable("report_sent", True)
-    print("✅ Report sent!")
+    print(f"✅ Fetched data for {user_data['total_users']} users")
+    print(f"   Active users: {user_data['active_users']}")
+    print(f"   New signups today: {user_data['new_signups_today']}")
 
-# Add states to workflow - they'll run sequentially by default
-agent.add_state("fetch_data", fetch_data)
-agent.add_state("calculate_metrics", calculate_metrics, dependencies=["fetch_data"])
-agent.add_state("send_report", send_report, dependencies=["calculate_metrics"])
+async def fetch_revenue_data(context):
+    """Step 2: Fetch financial data from our payments system.""" 
+    print("💰 Fetching revenue data from payments API...")
+    
+    # Simulate API call to payment processor
+    await asyncio.sleep(0.3)
+    
+    # Store revenue data in context
+    revenue_data = {
+        "total_revenue": 145000,
+        "revenue_today": 3200,
+        "avg_order_value": 67.50,
+        "subscription_revenue": 98000,
+        "one_time_revenue": 47000
+    }
+    
+    context.set_variable("revenue_data", revenue_data)
+    
+    print(f"✅ Total revenue: ${revenue_data['total_revenue']:,}")
+    print(f"   Today's revenue: ${revenue_data['revenue_today']:,}")
+    print(f"   Average order: ${revenue_data['avg_order_value']}")
 
-# Run the complete pipeline
+async def calculate_business_metrics(context):
+    """Step 3: Calculate key business metrics using fetched data."""
+    print("🧮 Calculating business metrics...")
+    
+    # Retrieve data from previous states
+    user_data = context.get_variable("user_data")
+    revenue_data = context.get_variable("revenue_data")
+    
+    # Calculate important business metrics
+    revenue_per_user = revenue_data["total_revenue"] / user_data["total_users"]
+    user_engagement_rate = user_data["active_users"] / user_data["total_users"]
+    daily_growth_rate = user_data["new_signups_today"] / user_data["total_users"]
+    
+    # Create comprehensive metrics object
+    business_metrics = {
+        "revenue_per_user": round(revenue_per_user, 2),
+        "user_engagement_rate": round(user_engagement_rate * 100, 1),  # Convert to percentage
+        "daily_growth_rate": round(daily_growth_rate * 100, 3),  # Convert to percentage
+        "subscription_ratio": round((revenue_data["subscription_revenue"] / revenue_data["total_revenue"]) * 100, 1),
+        "avg_session_minutes": round(user_data["avg_session_time"] / 60, 1)
+    }
+    
+    # Store calculated metrics for other states to use
+    context.set_variable("business_metrics", business_metrics)
+    context.set_variable("calculation_time", datetime.now())
+    
+    print(f"✅ Key metrics calculated:")
+    print(f"   Revenue per user: ${business_metrics['revenue_per_user']}")
+    print(f"   User engagement: {business_metrics['user_engagement_rate']}%")
+    print(f"   Daily growth: {business_metrics['daily_growth_rate']}%")
+
+async def generate_executive_report(context):
+    """Step 4: Generate a comprehensive executive summary."""
+    print("📈 Generating executive report...")
+    
+    # Gather all data from previous states
+    user_data = context.get_variable("user_data")
+    revenue_data = context.get_variable("revenue_data") 
+    metrics = context.get_variable("business_metrics")
+    fetch_time = context.get_variable("data_fetch_time")
+    
+    # Create executive summary
+    executive_report = {
+        "report_title": "Daily Business Intelligence Summary",
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "data_as_of": fetch_time.strftime("%Y-%m-%d %H:%M:%S"),
+        
+        # Key Performance Indicators
+        "kpis": {
+            "total_users": user_data["total_users"],
+            "active_users": user_data["active_users"],
+            "total_revenue": revenue_data["total_revenue"],
+            "revenue_per_user": metrics["revenue_per_user"]
+        },
+        
+        # Growth Metrics
+        "growth": {
+            "new_signups_today": user_data["new_signups_today"],
+            "daily_growth_rate": f"{metrics['daily_growth_rate']}%",
+            "revenue_today": revenue_data["revenue_today"]
+        },
+        
+        # Engagement Metrics
+        "engagement": {
+            "user_engagement_rate": f"{metrics['user_engagement_rate']}%",
+            "avg_session_minutes": metrics["avg_session_minutes"],
+            "countries_active": len(user_data["countries"])
+        },
+        
+        # Revenue Breakdown
+        "revenue_analysis": {
+            "subscription_revenue": revenue_data["subscription_revenue"],
+            "one_time_revenue": revenue_data["one_time_revenue"],
+            "subscription_ratio": f"{metrics['subscription_ratio']}%",
+            "avg_order_value": revenue_data["avg_order_value"]
+        }
+    }
+    
+    # Store the final report
+    context.set_variable("executive_report", executive_report)
+    context.set_variable("report_ready", True)
+    
+    print("🎉 Executive report generated!")
+    print(f"📊 Summary: {executive_report['kpis']['total_users']} users, ${executive_report['kpis']['total_revenue']:,} revenue")
+    print(f"📈 Growth: {executive_report['growth']['new_signups_today']} new users today")
+
+# Configure the workflow with proper dependencies
+# Each state depends on the previous ones to ensure correct data flow
+bi_agent.add_state("fetch_user_data", fetch_user_data)
+bi_agent.add_state("fetch_revenue_data", fetch_revenue_data, dependencies=["fetch_user_data"])
+bi_agent.add_state("calculate_business_metrics", calculate_business_metrics, 
+                   dependencies=["fetch_user_data", "fetch_revenue_data"])
+bi_agent.add_state("generate_executive_report", generate_executive_report,
+                   dependencies=["calculate_business_metrics"])
+
+# Run the complete business intelligence pipeline
 async def main():
-    result = await agent.run()
-    print(f"\\nWorkflow completed! Report sent: {result.get_variable('report_sent')}")
+    print("🚀 Starting Business Intelligence Pipeline")
+    print("=" * 55)
+    
+    # Execute the workflow
+    result = await bi_agent.run()
+    
+    print("=" * 55)
+    
+    # Check if the report was generated successfully
+    if result.get_variable("report_ready"):
+        print("✅ Business Intelligence Pipeline completed successfully!")
+        
+        # Access the final report
+        report = result.get_variable("executive_report")
+        print(f"📋 Report: {report['report_title']}")
+        print(f"⏰ Generated: {report['generated_at']}")
+        
+        # Show key metrics
+        kpis = report['kpis']
+        print(f"👥 Users: {kpis['total_users']} total, {kpis['active_users']} active")
+        print(f"💰 Revenue: ${kpis['total_revenue']:,} (${kpis['revenue_per_user']} per user)")
+    else:
+        print("❌ Pipeline failed - check logs above")
 
 if __name__ == "__main__":
     asyncio.run(main())
 \`\`\`
 
-**Output:**
-\`\`\`
-📊 Fetching user data...
-✅ Data fetched successfully
-💰 Revenue per user: $36.00
-✅ Metrics calculated
-📧 Sending report: 1250 users, RPU is $36.00
-✅ Report sent!
+**When you run this pipeline, you'll see:**
 
-Workflow completed! Report sent: True
+\`\`\`
+🚀 Starting Business Intelligence Pipeline
+=======================================================
+📊 Fetching user data from database...
+✅ Fetched data for 1250 users
+   Active users: 890
+   New signups today: 45
+💰 Fetching revenue data from payments API...
+✅ Total revenue: $145,000
+   Today's revenue: $3,200
+   Average order: $67.5
+🧮 Calculating business metrics...
+✅ Key metrics calculated:
+   Revenue per user: $116.0
+   User engagement: 71.2%
+   Daily growth: 3.6%
+📈 Generating executive report...
+🎉 Executive report generated!
+📊 Summary: 1250 users, $145,000 revenue
+📈 Growth: 45 new users today
+=======================================================
+✅ Business Intelligence Pipeline completed successfully!
+📋 Report: Daily Business Intelligence Summary
+⏰ Generated: 2024-01-15 10:30:45
+👥 Users: 1250 total, 890 active
+💰 Revenue: $145,000 ($116.0 per user)
 \`\`\`
 
-### 💡 Context Methods You'll Use Most
+### **Key Data Flow Patterns Demonstrated**
+
+This example shows several important patterns:
+
+1. **Sequential Data Building**: Each state adds more data to the context
+2. **Data Transformation**: Raw data becomes processed metrics
+3. **Data Aggregation**: Multiple data sources combine into comprehensive reports
+4. **Data Persistence**: All data remains available throughout the workflow
+5. **Complex Objects**: Store and retrieve dictionaries, lists, and custom objects
+
+### **Essential Context Methods**
+
+Here are the context methods you'll use most frequently:
 
 \`\`\`python
-# Store any Python object
-context.set_variable("user_data", {"name": "Alice", "age": 30})
-context.set_variable("score", 95.5)
-context.set_variable("items", [1, 2, 3, 4, 5])
-
-# Retrieve with optional defaults
-user_data = context.get_variable("user_data")
-score = context.get_variable("score", 0.0)  # Default to 0.0 if not found
-missing = context.get_variable("nonexistent", "default_value")
+async def context_examples(context):
+    # === STORING DATA ===
+    
+    # Store simple values
+    context.set_variable("user_count", 1250)
+    context.set_variable("is_premium", True)
+    context.set_variable("rating", 4.7)
+    
+    # Store complex objects
+    context.set_variable("user_profile", {
+        "name": "Alice Johnson",
+        "email": "alice@example.com", 
+        "preferences": {"theme": "dark", "notifications": True}
+    })
+    
+    # Store lists and arrays
+    context.set_variable("product_ids", [101, 205, 308, 412])
+    context.set_variable("tags", ["urgent", "customer-service", "billing"])
+    
+    # Store custom objects (like datetime, dataframes, etc.)
+    context.set_variable("created_at", datetime.now())
+    context.set_variable("processed_data", pandas_dataframe)  # If using pandas
+    
+    # === RETRIEVING DATA ===
+    
+    # Get data with no default (returns None if not found)
+    user_count = context.get_variable("user_count")
+    
+    # Get data with default values (safer approach)
+    count = context.get_variable("user_count", 0)  # Default to 0
+    profile = context.get_variable("user_profile", {})  # Default to empty dict
+    tags = context.get_variable("tags", [])  # Default to empty list
+    
+    # === CHECKING IF DATA EXISTS ===
+    
+    # Check if a variable exists before using it
+    if context.has_variable("user_profile"):
+        profile = context.get_variable("user_profile")
+        print(f"User: {profile['name']}")
+    
+    # === WORKING WITH NESTED DATA ===
+    
+    # Safely access nested dictionary data
+    preferences = context.get_variable("user_profile", {}).get("preferences", {})
+    theme = preferences.get("theme", "light")
+    
+    # Or use helper methods for complex access patterns
+    def safe_get_nested(context, key, *nested_keys, default=None):
+        data = context.get_variable(key, {})
+        for nested_key in nested_keys:
+            if isinstance(data, dict) and nested_key in data:
+                data = data[nested_key]
+            else:
+                return default
+        return data
+    
+    # Usage: get user.preferences.theme with fallback
+    theme = safe_get_nested(context, "user_profile", "preferences", "theme", default="light")
 \`\`\`
 
-## Workflow Control: Make It Smart
+### **Best Practices for Data Flow**
 
-Puffinflow gives you powerful ways to control how your workflow executes. Let's see the most practical patterns:
+1. **Use Descriptive Names**: \`user_count\` instead of \`count\`, \`processed_orders\` instead of \`data\`
 
-### 1. 🔗 Dependencies: "Wait for X before doing Y"
+2. **Provide Defaults**: Always use defaults when retrieving data to avoid errors
 
-Use dependencies when some states need others to complete first:
+3. **Document Data Contracts**: Comment what each state expects and provides
+
+4. **Validate Critical Data**: Check that required data exists before processing
+
+5. **Keep Data Flat When Possible**: Avoid deeply nested structures for better performance
+
+6. **Use Type Hints**: Help other developers understand your data structures
 
 \`\`\`python
-agent = Agent("smart-workflow")
+async def well_documented_state(context):
+    """
+    Processes user orders and calculates shipping costs.
+    
+    Expected context variables:
+    - user_orders: List[Dict] - List of order dictionaries
+    - shipping_rules: Dict - Shipping calculation rules
+    - user_location: str - User's country code
+    
+    Sets context variables:
+    - total_shipping_cost: float - Total shipping for all orders
+    - shipping_breakdown: Dict - Per-order shipping costs
+    - estimated_delivery: str - Estimated delivery date
+    """
+    
+    # Validate required inputs exist
+    orders = context.get_variable("user_orders", [])
+    if not orders:
+        context.set_variable("error", "No orders found")
+        return "error_handler"
+    
+    # Your processing logic here...
+    # Always document what you're storing!
+\`\`\`
+
+This comprehensive approach to data sharing ensures your workflows are robust, maintainable, and easy to understand!
+
+## Mastering Workflow Control: Building Smart, Efficient Workflows
+
+One of Puffinflow's greatest strengths is its flexible workflow control system. You can build everything from simple linear pipelines to complex, branching workflows that adapt to data and conditions. Let's explore the three main patterns you'll use to control workflow execution.
+
+### **Understanding Workflow Execution Models**
+
+Before diving into specific patterns, it's important to understand how Puffinflow executes workflows:
+
+- **Entry Points**: States with no dependencies run first (automatically determined)
+- **Dependency Resolution**: States wait for their dependencies before executing
+- **Dynamic Routing**: States can control what runs next via return values
+- **Parallel Execution**: Multiple states can run simultaneously for efficiency
+- **Completion**: Workflow ends when no more states can execute
+
+### **Pattern 1: 🔗 Dependency-Based Execution - "Wait for Prerequisites"**
+
+Dependencies are perfect when you need guaranteed execution order and want states to run in parallel when possible.
+
+**When to use dependencies:**
+- Data must be fetched before processing
+- Multiple independent data sources can be fetched simultaneously
+- Complex workflows with clear prerequisite relationships
+- Maximum parallelization while maintaining correctness
+
+\`\`\`python
+import asyncio
+from puffinflow import Agent
+
+# Create an intelligent workflow that maximizes parallel execution
+intelligence_agent = Agent("parallel-intelligence-workflow")
 
 async def fetch_user_data(context):
-    print("👥 Fetching users...")
-    await asyncio.sleep(0.5)  # Simulate API call
-    context.set_variable("users", ["Alice", "Bob", "Charlie"])
+    """Fetch user data - can run immediately (no dependencies)."""
+    print("👥 Fetching user data from database...")
+    
+    # Simulate database query with realistic delay
+    await asyncio.sleep(0.8)  # Typical database query time
+    
+    # Store comprehensive user data
+    user_data = {
+        "total_users": 15000,
+        "active_users": 12500,
+        "premium_users": 3200,
+        "countries": ["US", "UK", "DE", "FR", "JP", "CA", "AU"],
+        "avg_session_time": 425,  # seconds
+        "churn_rate": 0.05
+    }
+    
+    context.set_variable("user_data", user_data)
+    print(f"✅ User data fetched: {user_data['total_users']:,} total users")
 
 async def fetch_sales_data(context):
-    print("💰 Fetching sales...")
-    await asyncio.sleep(0.3)  # Simulate API call  
-    context.set_variable("sales", [100, 200, 150])
-
-async def generate_report(context):
-    # This waits for BOTH fetch operations to complete
-    users = context.get_variable("users")
-    sales = context.get_variable("sales")
+    """Fetch sales data - can run in parallel with user data."""
+    print("💰 Fetching sales data from payment processor...")
     
-    print(f"📊 Report: {len(users)} users, {sum(sales)} total sales")
-    context.set_variable("report", "Generated!")
+    # Simulate API call to payment system
+    await asyncio.sleep(0.6)  # Typical API response time
+    
+    # Store detailed sales information
+    sales_data = {
+        "total_revenue": 2450000,
+        "monthly_revenue": 425000,
+        "daily_revenue": 14200,
+        "avg_order_value": 127.50,
+        "total_orders": 19215,
+        "refund_rate": 0.03
+    }
+    
+    context.set_variable("sales_data", sales_data)
+    print(f"✅ Sales data fetched: ${sales_data['total_revenue']:,} total revenue")
 
-# fetch_user_data and fetch_sales_data run in PARALLEL
-# generate_report waits for BOTH to complete
-agent.add_state("fetch_user_data", fetch_user_data)
-agent.add_state("fetch_sales_data", fetch_sales_data)
-agent.add_state("generate_report", generate_report, 
-               dependencies=["fetch_user_data", "fetch_sales_data"])
+async def fetch_product_data(context):
+    """Fetch product catalog - can also run in parallel."""
+    print("📦 Fetching product catalog from inventory...")
+    
+    # Simulate inventory system query
+    await asyncio.sleep(0.4)
+    
+    # Store product information
+    product_data = {
+        "total_products": 1250,
+        "active_products": 980,
+        "categories": ["Electronics", "Books", "Clothing", "Home", "Sports"],
+        "top_selling": ["iPhone 15", "MacBook Pro", "AirPods", "iPad"],
+        "inventory_value": 1850000
+    }
+    
+    context.set_variable("product_data", product_data)
+    print(f"✅ Product data fetched: {product_data['total_products']} products")
 
-# Runs: fetch_user_data + fetch_sales_data → generate_report
+async def calculate_business_intelligence(context):
+    """Process all data - waits for ALL fetch operations to complete."""
+    print("🧠 Calculating comprehensive business intelligence...")
+    
+    # Get all data from previous states
+    user_data = context.get_variable("user_data")
+    sales_data = context.get_variable("sales_data")
+    product_data = context.get_variable("product_data")
+    
+    # Perform complex calculations using all data sources
+    revenue_per_user = sales_data["total_revenue"] / user_data["total_users"]
+    premium_conversion_rate = user_data["premium_users"] / user_data["total_users"]
+    product_penetration = sales_data["total_orders"] / product_data["active_products"]
+    
+    # Create comprehensive business intelligence report
+    business_intelligence = {
+        "financial_metrics": {
+            "revenue_per_user": round(revenue_per_user, 2),
+            "premium_conversion_rate": round(premium_conversion_rate * 100, 2),
+            "average_order_value": sales_data["avg_order_value"],
+            "monthly_recurring_revenue": round(sales_data["monthly_revenue"] * 0.7, 2)  # Estimate
+        },
+        "user_metrics": {
+            "user_engagement_rate": round((user_data["active_users"] / user_data["total_users"]) * 100, 1),
+            "user_retention_rate": round((1 - user_data["churn_rate"]) * 100, 1),
+            "global_presence": len(user_data["countries"]),
+            "session_quality_score": min(10, user_data["avg_session_time"] / 60)  # Score out of 10
+        },
+        "product_metrics": {
+            "catalog_utilization": round((product_data["active_products"] / product_data["total_products"]) * 100, 1),
+            "product_penetration": round(product_penetration, 2),
+            "inventory_turnover": round(sales_data["total_revenue"] / product_data["inventory_value"], 2)
+        }
+    }
+    
+    context.set_variable("business_intelligence", business_intelligence)
+    
+    print("✅ Business intelligence calculated:")
+    print(f"   💵 Revenue per user: ${business_intelligence['financial_metrics']['revenue_per_user']}")
+    print(f"   👥 User engagement: {business_intelligence['user_metrics']['user_engagement_rate']}%")
+    print(f"   📦 Catalog utilization: {business_intelligence['product_metrics']['catalog_utilization']}%")
+
+async def generate_strategic_recommendations(context):
+    """Generate actionable recommendations - depends on BI calculations."""
+    print("💡 Generating strategic recommendations...")
+    
+    # Get business intelligence data
+    bi_data = context.get_variable("business_intelligence")
+    user_data = context.get_variable("user_data")
+    sales_data = context.get_variable("sales_data")
+    
+    # Generate data-driven recommendations
+    recommendations = []
+    
+    # Analyze user engagement
+    engagement_rate = bi_data["user_metrics"]["user_engagement_rate"]
+    if engagement_rate < 75:
+        recommendations.append({
+            "priority": "high",
+            "category": "user_engagement",
+            "recommendation": "Implement user engagement campaigns",
+            "rationale": f"Current engagement rate of {engagement_rate}% is below industry standard",
+            "expected_impact": "15-25% increase in active users"
+        })
+    
+    # Analyze revenue metrics
+    rpu = bi_data["financial_metrics"]["revenue_per_user"]
+    if rpu < 150:
+        recommendations.append({
+            "priority": "medium",
+            "category": "revenue_optimization",
+            "recommendation": "Introduce premium tier features and upselling",
+            "rationale": f"RPU of ${rpu} indicates opportunity for monetization",
+            "expected_impact": "20-30% increase in revenue per user"
+        })
+    
+    # Analyze product catalog
+    catalog_util = bi_data["product_metrics"]["catalog_utilization"]
+    if catalog_util < 85:
+        recommendations.append({
+            "priority": "medium",
+            "category": "product_optimization",
+            "recommendation": "Optimize product catalog and improve discoverability",
+            "rationale": f"Only {catalog_util}% of products are actively selling",
+            "expected_impact": "10-15% increase in order volume"
+        })
+    
+    context.set_variable("strategic_recommendations", recommendations)
+    context.set_variable("analysis_complete", True)
+    
+    print(f"✅ Generated {len(recommendations)} strategic recommendations")
+    for rec in recommendations:
+        print(f"   🎯 {rec['priority'].upper()}: {rec['recommendation']}")
+
+# Configure the workflow with intelligent dependencies
+# Fetch operations run in parallel, then analysis waits for all data
+intelligence_agent.add_state("fetch_user_data", fetch_user_data)
+intelligence_agent.add_state("fetch_sales_data", fetch_sales_data)
+intelligence_agent.add_state("fetch_product_data", fetch_product_data)
+
+# This state waits for ALL three fetch operations to complete
+intelligence_agent.add_state("calculate_business_intelligence", calculate_business_intelligence,
+                           dependencies=["fetch_user_data", "fetch_sales_data", "fetch_product_data"])
+
+# This state waits for the BI calculations
+intelligence_agent.add_state("generate_strategic_recommendations", generate_strategic_recommendations,
+                           dependencies=["calculate_business_intelligence"])
+
+# Run the intelligent workflow
+async def main():
+    print("🚀 Starting Intelligent Business Analysis")
+    print("=" * 50)
+    
+    start_time = asyncio.get_event_loop().time()
+    result = await intelligence_agent.run()
+    end_time = asyncio.get_event_loop().time()
+    
+    print("=" * 50)
+    
+    if result.get_variable("analysis_complete"):
+        execution_time = round(end_time - start_time, 2)
+        print(f"✅ Analysis completed in {execution_time} seconds")
+        
+        # Show the power of parallel execution
+        print(f"💡 Note: Without parallel execution, this would take ~1.8 seconds")
+        print(f"    With parallel execution: {execution_time} seconds")
+        print(f"    Time saved: ~{1.8 - execution_time:.1f} seconds ({((1.8 - execution_time) / 1.8) * 100:.0f}% faster)")
+        
+        # Display recommendations
+        recommendations = result.get_variable("strategic_recommendations")
+        print(f"\\n📋 Strategic Recommendations Generated: {len(recommendations)}")
+        for i, rec in enumerate(recommendations, 1):
+            print(f"   {i}. [{rec['priority'].upper()}] {rec['recommendation']}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+\`\`\`
+
+**Key Benefits of Dependency-Based Control:**
+
+1. **Maximum Parallelization**: Independent states run simultaneously
+2. **Guaranteed Order**: Dependent states wait for prerequisites
+3. **Automatic Optimization**: Puffinflow optimizes execution automatically
+4. **Clear Dependencies**: Easy to understand what depends on what
+5. **Robust Execution**: Failed dependencies prevent downstream execution
+
+**Execution Timeline:**
+\`\`\`
+Time 0.0s: [fetch_user_data] [fetch_sales_data] [fetch_product_data] start in parallel
+Time 0.8s: All fetch operations complete
+Time 0.8s: [calculate_business_intelligence] starts
+Time 0.9s: BI calculation completes
+Time 0.9s: [generate_strategic_recommendations] starts  
+Time 1.0s: Workflow complete
 \`\`\`
 
 ### 2. 🤔 Dynamic Routing: "Decide what to do next"
