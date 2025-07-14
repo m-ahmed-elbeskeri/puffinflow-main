@@ -47,6 +47,7 @@ class Context:
     _META_TYPED = "_meta_typed_"
     _META_VALIDATED = "_meta_validated_"
     _META_METADATA = "_meta_metadata_"
+    _META_CACHE = "_meta_cache_"
     _IMMUTABLE_PREFIXES = ("const_", "secret_")
 
     def __init__(self, shared_state: dict[str, Any], cache_ttl: int = 300) -> None:
@@ -55,11 +56,11 @@ class Context:
         self._typed_data: dict[str, Any] = {}
         self._typed_var_types: dict[str, type] = {}
         self._validated_types: dict[str, type] = {}
-        self._cache: dict[str, tuple] = {}  # (value, expiry_time)
         self._outputs: dict[str, Any] = {}
         self._metadata: dict[str, Any] = {}
         self._metrics: dict[str, Union[int, float]] = {}
         self._restore_metadata()
+        self._restore_cache()
 
     def _restore_metadata(self) -> None:
         """Restore metadata from shared state."""
@@ -76,6 +77,21 @@ class Context:
         for k in validated_keys:
             orig = k[len(self._META_VALIDATED) :]
             self._validated_types[orig] = self.shared_state[k]
+
+    def _restore_cache(self) -> None:
+        """Restore cache data from shared state."""
+        # Restore cache entries
+        cache_keys = [k for k in self.shared_state if k.startswith(self._META_CACHE)]
+        for k in cache_keys:
+            orig = k[len(self._META_CACHE) :]
+            cache_data = self.shared_state[k]
+            # Cache data is stored as (value, expiry_time) tuple
+            if isinstance(cache_data, tuple) and len(cache_data) == 2:
+                value, expiry_time = cache_data
+                # Only restore if not expired
+                if self._now() <= expiry_time:
+                    # Store in memory for this context instance (no _cache attribute needed)
+                    pass  # We'll access directly from shared_state
 
     @staticmethod
     def _now() -> float:
@@ -181,13 +197,13 @@ class Context:
             self._typed_var_types[key] = cls
             self._persist_meta(self._META_TYPED, key, cls)
 
-    def get_typed_variable(self, key: str, expected: type[Any]) -> Optional[Any]:
+    def get_typed_variable(self, key: str, expected: Optional[type[Any]] = None) -> Optional[Any]:
         """Get a typed variable with type checking."""
         val = self.shared_state.get(key)
         if val is None:
             return None
 
-        if not isinstance(val, expected):
+        if expected and not isinstance(val, expected):
             return None
 
         return val
@@ -318,16 +334,22 @@ class Context:
             ttl = self.cache_ttl
 
         expiry_time = self._now() + ttl if ttl > 0 else self._now() - 1
-        self._cache[key] = (value, expiry_time)
+        cache_key = f"{self._META_CACHE}{key}"
+        self.shared_state[cache_key] = (value, expiry_time)
 
     def get_cached(self, key: str, default: Any = None) -> Any:
         """Get a cached value, respecting TTL."""
-        if key not in self._cache:
+        cache_key = f"{self._META_CACHE}{key}"
+        if cache_key not in self.shared_state:
             return default
 
-        value, expiry_time = self._cache[key]
+        cache_data = self.shared_state[cache_key]
+        if not isinstance(cache_data, tuple) or len(cache_data) != 2:
+            return default
+
+        value, expiry_time = cache_data
         if self._now() > expiry_time:
-            del self._cache[key]
+            del self.shared_state[cache_key]
             return default
 
         return value
@@ -335,12 +357,18 @@ class Context:
     def clear_expired_cache(self) -> int:
         """Clear expired cache entries and return count cleared."""
         now = self._now()
-        expired_keys = [
-            key for key, (_, expiry_time) in self._cache.items() if now > expiry_time
-        ]
+        cache_keys = [k for k in self.shared_state if k.startswith(self._META_CACHE)]
+        expired_keys = []
+
+        for cache_key in cache_keys:
+            cache_data = self.shared_state[cache_key]
+            if isinstance(cache_data, tuple) and len(cache_data) == 2:
+                _, expiry_time = cache_data
+                if now > expiry_time:
+                    expired_keys.append(cache_key)
 
         for key in expired_keys:
-            del self._cache[key]
+            del self.shared_state[key]
 
         return len(expired_keys)
 
@@ -449,7 +477,7 @@ class Context:
             "metadata": len(self._metadata),
             "metrics": len(self._metrics),
             "typed_data": len(self._typed_data),
-            "cached_items": len(self._cache),
+            "cached_items": len([k for k in self.shared_state if k.startswith(self._META_CACHE)]),
             "constants": len([k for k in self.shared_state if k.startswith("const_")]),
             "secrets": len([k for k in self.shared_state if k.startswith("secret_")]),
         }

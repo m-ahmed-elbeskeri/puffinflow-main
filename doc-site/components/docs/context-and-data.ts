@@ -124,7 +124,9 @@ async def cache_data(context):
 
 async def use_cache(context):
     session = context.get_cached("session", default="EXPIRED")
-    print(f"Session: {session}")
+    temp_result = context.get_cached("temp_result", default="EXPIRED")
+    context.set_variable("session_status", f"Session: {session}")
+    context.set_variable("temp_status", f"Temp: {temp_result}")
 \`\`\`
 
 ## Per-State Scratch Data
@@ -151,21 +153,30 @@ async def state_b(context):
 
 ## Output Data Management
 
-Use \`set_output()\` for final workflow results:
+Use \`set_output()\` for final workflow results within a single state:
 
 \`\`\`python
-async def calculate(context):
+async def calculate_and_summarize(context):
+    # Calculate step
     orders = [{"amount": 100}, {"amount": 200}]
     total = sum(order["amount"] for order in orders)
 
     context.set_output("total_revenue", total)
     context.set_output("order_count", len(orders))
-
-async def summary(context):
+    
+    # Summary step (within same state, outputs persist)
     revenue = context.get_output("total_revenue")
     count = context.get_output("order_count")
-    print(f"Revenue: \${revenue}, Orders: {count}")
+    
+    # Store as variables for inter-state access
+    context.set_variable("total_revenue", revenue)
+    context.set_variable("order_count", count)
+    context.set_variable(
+        "summary_message", f"Revenue: \${revenue}, Orders: {count}"
+    )
 \`\`\`
+
+> **Note:** Outputs are state-specific and don't persist across states. For data sharing between states, use \`set_variable()\` instead.
 
 ## Complete Example: Order Processing
 

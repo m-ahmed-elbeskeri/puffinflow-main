@@ -68,8 +68,9 @@ async def gather_info(context):
 @state(cpu=2.0, memory=1024)
 async def analyze_results(context):
     results = context.get_variable("raw_results")
+    query = context.get_variable("search_query")
     # Simulate LLM analysis
-    analysis = f"Analysis of {len(results)} articles about the query"
+    analysis = f"Analysis of {len(results)} articles about {query}"
     context.set_variable("analysis", analysis)
     return "generate_report"
 
@@ -86,11 +87,8 @@ agent.add_state("gather_info", gather_info)
 agent.add_state("analyze_results", analyze_results)
 agent.add_state("generate_report", generate_report)
 
-# Set initial data
-agent.set_variable("search_query", "latest AI trends")
-
-# Run it
-result = await agent.run()
+# Run it with initial context
+result = await agent.run(initial_context={"search_query": "latest AI trends"})
 print(result.get_variable("final_report"))
 \`\`\`
 

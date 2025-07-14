@@ -24,8 +24,9 @@ class TestIntroductionExamples:
         @state(cpu=2.0, memory=1024)
         async def analyze_results(context):
             results = context.get_variable("raw_results")
+            query = context.get_variable("search_query")
             # Simulate LLM analysis
-            analysis = f"Analysis of {len(results)} articles about the query"
+            analysis = f"Analysis of {len(results)} articles about {query}"
             context.set_variable("analysis", analysis)
             return "generate_report"
 
@@ -39,8 +40,8 @@ class TestIntroductionExamples:
 
         # Add states to agent
         agent.add_state("gather_info", gather_info)
-        agent.add_state("analyze_results", analyze_results)
-        agent.add_state("generate_report", generate_report)
+        agent.add_state("analyze_results", analyze_results, dependencies=["gather_info"])
+        agent.add_state("generate_report", generate_report, dependencies=["analyze_results"])
 
         # Run it with initial context
         result = await agent.run(initial_context={"search_query": "latest AI trends"})
@@ -49,7 +50,7 @@ class TestIntroductionExamples:
         final_report = result.get_variable("final_report")
         assert final_report is not None
         assert "latest AI trends" in final_report
-        assert "Analysis of 1 articles" in final_report
+        assert "Analysis of 1 articles about latest AI trends" in final_report
 
         # Verify intermediate results
         raw_results = result.get_variable("raw_results")
@@ -57,4 +58,4 @@ class TestIntroductionExamples:
         assert raw_results[0]["title"] == "Article about latest AI trends"
 
         analysis = result.get_variable("analysis")
-        assert analysis == "Analysis of 1 articles about the query"
+        assert analysis == "Analysis of 1 articles about latest AI trends"

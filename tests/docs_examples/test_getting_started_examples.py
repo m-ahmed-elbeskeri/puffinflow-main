@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-from typing import Dict, List
 
 import pytest
 
@@ -216,17 +215,17 @@ class TestGettingStartedExamples:
         # For this test, we'll use the dependency approach instead of dynamic routing
         # to ensure predictable behavior
         async def check_and_route(context):
-            user_type = "premium" 
+            user_type = "premium"
             context.set_variable("user_type", user_type)
             print(f"🔍 User type: {user_type}")
-            
+
             if user_type == "premium":
                 context.set_variable("features", ["advanced_analytics", "priority_support"])
                 print("⭐ Premium user workflow")
             else:
                 context.set_variable("features", ["basic_analytics"])
                 print("👋 Basic user workflow")
-            
+
             # Set welcome message
             features = context.get_variable("features")
             welcome_msg = f"Welcome {user_type} user! Features: {', '.join(features)}"
@@ -483,39 +482,39 @@ class TestGettingStartedExamples:
         async def extract_data(context):
             """Extract data from multiple sources."""
             print("🔌 Extracting data from sources...")
-            
+
             user_data = [
                 {"id": 1, "name": "Alice", "email": "alice@example.com", "purchases": 5},
                 {"id": 2, "name": "Bob", "email": "bob@example.com", "purchases": 3},
                 {"id": 3, "name": "Charlie", "email": "charlie@example.com", "purchases": 8}
             ]
-            
+
             sales_data = [
                 {"user_id": 1, "amount": 120.50, "product": "Widget A"},
                 {"user_id": 2, "amount": 75.25, "product": "Widget B"},
                 {"user_id": 1, "amount": 200.00, "product": "Widget C"},
                 {"user_id": 3, "amount": 99.99, "product": "Widget A"}
             ]
-            
+
             context.set_variable("user_data", user_data)
             context.set_variable("sales_data", sales_data)
-            
+
             print(f"✅ Extracted {len(user_data)} users and {len(sales_data)} sales records")
 
         @state(cpu=2.0, memory=1024)
         async def transform_data(context):
             """Transform and enrich the data."""
             print("🔄 Transforming data...")
-            
+
             users = context.get_variable("user_data")
             sales = context.get_variable("sales_data")
-            
+
             # Transform: Calculate total revenue per user
             user_revenue = {}
             for sale in sales:
                 user_id = sale["user_id"]
                 user_revenue[user_id] = user_revenue.get(user_id, 0) + sale["amount"]
-            
+
             # Enrich: Combine user data with their revenue
             enriched_users = []
             for user in users:
@@ -525,7 +524,7 @@ class TestGettingStartedExamples:
                     "avg_purchase_value": user_revenue.get(user["id"], 0) / max(user["purchases"], 1)
                 }
                 enriched_users.append(enriched_user)
-            
+
             # Calculate summary metrics
             summary = {
                 "total_users": len(enriched_users),
@@ -533,33 +532,33 @@ class TestGettingStartedExamples:
                 "avg_revenue_per_user": sum(user_revenue.values()) / len(enriched_users),
                 "top_customer": max(enriched_users, key=lambda x: x["total_revenue"])["name"]
             }
-            
+
             context.set_variable("enriched_users", enriched_users)
             context.set_variable("summary_metrics", summary)
-            
+
             print(f"✅ Transformed data: {summary['total_users']} users, ${summary['total_revenue']:.2f} total revenue")
 
         async def validate_data(context):
             """Validate the transformed data meets quality standards."""
             print("🔍 Validating data quality...")
-            
+
             enriched_users = context.get_variable("enriched_users")
-            
+
             # Quality checks
             issues = []
-            
+
             for user in enriched_users:
                 if not user.get("email") or "@" not in user["email"]:
                     issues.append(f"Invalid email for user {user['name']}")
-                
+
                 if user["total_revenue"] < 0:
                     issues.append(f"Negative revenue for user {user['name']}")
-            
+
             if issues:
                 print(f"❌ Data quality issues found: {issues}")
                 context.set_variable("validation_errors", issues)
                 return "handle_errors"
-            
+
             context.set_variable("data_validated", True)
             print("✅ Data validation passed!")
             return "load_data"
@@ -567,26 +566,26 @@ class TestGettingStartedExamples:
         async def load_data(context):
             """Load data to destination (database, warehouse, etc.)."""
             print("💾 Loading data to destination...")
-            
+
             enriched_users = context.get_variable("enriched_users")
             summary = context.get_variable("summary_metrics")
-            
+
             print(f"Saving {len(enriched_users)} enriched user records...")
             print(f"Saving summary metrics: {summary}")
-            
+
             context.set_variable("load_completed", True)
             context.set_variable("records_loaded", len(enriched_users))
-            
+
             print("✅ Data loading completed successfully!")
 
         async def handle_errors(context):
             """Handle any data quality issues."""
             errors = context.get_variable("validation_errors", [])
             print(f"🚨 Handling {len(errors)} data quality issues:")
-            
+
             for error in errors:
                 print(f"  - {error}")
-            
+
             context.set_variable("errors_handled", True)
             print("⚠️ Error handling completed")
 
@@ -604,13 +603,13 @@ class TestGettingStartedExamples:
         assert result.get_variable("load_completed") is True
         assert result.get_variable("records_loaded") == 3
         assert result.get_variable("data_validated") is True
-        
+
         # Verify the transformed data
         enriched_users = result.get_variable("enriched_users")
         assert len(enriched_users) == 3
         assert all("total_revenue" in user for user in enriched_users)
         assert all("avg_purchase_value" in user for user in enriched_users)
-        
+
         # Verify summary metrics
         summary = result.get_variable("summary_metrics")
         assert summary["total_users"] == 3
@@ -635,7 +634,7 @@ class TestGettingStartedExamples:
             # This waits for BOTH fetch operations to complete
             users = context.get_variable("users")
             sales = context.get_variable("sales")
-            
+
             print(f"📊 Report: {len(users)} users, {sum(sales)} total sales")
             context.set_variable("report", "Generated!")
 
@@ -643,7 +642,7 @@ class TestGettingStartedExamples:
         # generate_report waits for BOTH to complete
         agent.add_state("fetch_user_data", fetch_user_data)
         agent.add_state("fetch_sales_data", fetch_sales_data)
-        agent.add_state("generate_report", generate_report, 
+        agent.add_state("generate_report", generate_report,
                        dependencies=["fetch_user_data", "fetch_sales_data"])
 
         result = await agent.run()
@@ -653,7 +652,7 @@ class TestGettingStartedExamples:
         assert result.get_variable("sales") == [100, 200, 150]
         assert result.get_variable("report") == "Generated!"
 
-    @pytest.mark.skip("Smart routing test needs framework fixes")  
+    @pytest.mark.skip("Smart routing test needs framework fixes")
     async def test_smart_routing_example(self):
         """Test the smart routing example."""
         agent = Agent("smart-routing")
@@ -661,11 +660,11 @@ class TestGettingStartedExamples:
         async def check_user_type(context):
             user_type = context.get_variable("user_type", "basic")
             print(f"🔍 User type: {user_type}")
-            
+
             if user_type == "premium":
                 return "premium_workflow"
             elif user_type == "enterprise":
-                return "enterprise_workflow" 
+                return "enterprise_workflow"
             else:
                 return "basic_workflow"
 
@@ -692,14 +691,14 @@ class TestGettingStartedExamples:
         agent.add_state("check_user_type", check_user_type)
         # Make other states depend on check_user_type but rely on return values for execution
         agent.add_state("premium_workflow", premium_workflow, dependencies=["check_user_type"])
-        agent.add_state("enterprise_workflow", enterprise_workflow, dependencies=["check_user_type"]) 
+        agent.add_state("enterprise_workflow", enterprise_workflow, dependencies=["check_user_type"])
         agent.add_state("basic_workflow", basic_workflow, dependencies=["check_user_type"])
         agent.add_state("send_welcome", send_welcome, dependencies=["check_user_type"])
 
         # Test premium routing
         agent.set_variable("user_type", "premium")
         result = await agent.run()
-        
+
         features = result.get_variable("features")
         assert "advanced_analytics" in features
         assert "priority_support" in features
@@ -715,10 +714,10 @@ class TestGettingStartedExamples:
             ("send_welcome", send_welcome)
         ]:
             agent2.add_state(state_name, state_func)
-        
+
         agent2.set_variable("user_type", "enterprise")
         result2 = await agent2.run()
-        
+
         features2 = result2.get_variable("features")
         assert "all_premium" in features2
         assert "dedicated_support" in features2
@@ -733,11 +732,11 @@ class TestGettingStartedExamples:
         async def validate_document(context):
             """Validate uploaded document."""
             doc_path = context.get_variable("document_path")
-            
+
             if not doc_path or not doc_path.endswith(('.pdf', '.txt', '.docx')):
                 context.set_variable("error", "Invalid document format")
                 return "error_handler"
-            
+
             print(f"✅ Document validated: {doc_path}")
             context.set_variable("validated", True)
             return "extract_content"
@@ -746,30 +745,30 @@ class TestGettingStartedExamples:
         async def extract_content(context):
             """Extract text content from document."""
             doc_path = context.get_variable("document_path")
-            
+
             print(f"📄 Extracting content from {doc_path}...")
-            
+
             if doc_path.endswith('.pdf'):
                 content = "This is extracted PDF content about quarterly sales results..."
             elif doc_path.endswith('.txt'):
                 content = "This is plain text content about market analysis..."
             else:
                 content = "This is Word document content about product roadmap..."
-            
+
             context.set_variable("raw_content", content)
             context.set_variable("word_count", len(content.split()))
-            
+
             print(f"✅ Extracted {len(content.split())} words")
             return "analyze_with_ai"
 
         @state(cpu=1.0, memory=512, timeout=60.0, max_retries=3)
         async def analyze_with_ai(context):
             """Analyze content using LLM."""
-            content = context.get_variable("raw_content")
-            
+            _ = context.get_variable("raw_content")
+
             print("🧠 Analyzing content with AI...")
             await asyncio.sleep(0.1)  # Reduced for faster tests
-            
+
             # Determine content type for routing based on document path
             doc_path = context.get_variable("document_path")
             if "sales" in doc_path.lower():
@@ -781,7 +780,7 @@ class TestGettingStartedExamples:
             else:
                 topics = ["general", "content"]
                 doc_type = "general"
-            
+
             ai_analysis = {
                 "summary": f"Document discusses {doc_type} topics.",
                 "key_topics": topics,
@@ -790,10 +789,10 @@ class TestGettingStartedExamples:
                 "word_count": context.get_variable("word_count"),
                 "reading_time": context.get_variable("word_count") // 200
             }
-            
+
             context.set_variable("ai_analysis", ai_analysis)
             print(f"✅ AI analysis complete - {ai_analysis['sentiment']} sentiment")
-            
+
             # Route based on content type
             if "sales" in ai_analysis["key_topics"]:
                 return "process_sales_document"
@@ -805,14 +804,14 @@ class TestGettingStartedExamples:
         async def process_sales_document(context):
             """Specialized processing for sales documents."""
             print("📊 Processing sales document...")
-            
+
             sales_insights = {
                 "document_type": "sales_report",
                 "key_metrics": ["revenue", "growth_rate", "regional_performance"],
                 "stakeholders": ["sales_team", "executives", "finance"],
                 "action_items": ["Follow up on regional growth", "Prepare executive summary"]
             }
-            
+
             context.set_variable("specialized_insights", sales_insights)
             print("✅ Sales document processing complete")
             return "generate_final_report"
@@ -820,14 +819,14 @@ class TestGettingStartedExamples:
         async def process_roadmap_document(context):
             """Specialized processing for roadmap documents."""
             print("🗺️ Processing roadmap document...")
-            
+
             roadmap_insights = {
                 "document_type": "product_roadmap",
                 "key_metrics": ["timeline", "features", "milestones"],
                 "stakeholders": ["product_team", "engineering", "design"],
                 "action_items": ["Review feature priorities", "Update timeline estimates"]
             }
-            
+
             context.set_variable("specialized_insights", roadmap_insights)
             print("✅ Roadmap document processing complete")
             return "generate_final_report"
@@ -835,14 +834,14 @@ class TestGettingStartedExamples:
         async def process_general_document(context):
             """General processing for other document types."""
             print("📋 Processing general document...")
-            
+
             general_insights = {
                 "document_type": "general",
                 "key_metrics": ["content_quality", "readability"],
                 "stakeholders": ["general_audience"],
                 "action_items": ["Review content", "Categorize document"]
             }
-            
+
             context.set_variable("specialized_insights", general_insights)
             print("✅ General document processing complete")
             return "generate_final_report"
@@ -850,11 +849,11 @@ class TestGettingStartedExamples:
         async def generate_final_report(context):
             """Generate comprehensive analysis report."""
             print("📑 Generating final report...")
-            
+
             ai_analysis = context.get_variable("ai_analysis")
             specialized = context.get_variable("specialized_insights")
             doc_path = context.get_variable("document_path")
-            
+
             final_report = {
                 "document": doc_path,
                 "processing_timestamp": "2024-01-15T10:30:00Z",
@@ -866,9 +865,9 @@ class TestGettingStartedExamples:
                     f"Confidence score: {ai_analysis['confidence']:.2%}"
                 ]
             }
-            
+
             context.set_variable("final_report", final_report)
-            
+
             print("🎉 Document processing complete!")
             print(f"📄 Type: {specialized['document_type']}")
             print(f"🎯 Confidence: {ai_analysis['confidence']:.2%}")
@@ -897,18 +896,18 @@ class TestGettingStartedExamples:
         # Verify processing completed successfully
         assert result.get_variable("processing_failed") is None
         assert result.get_variable("validated") is True
-        
+
         # Verify AI analysis
         ai_analysis = result.get_variable("ai_analysis")
         assert ai_analysis is not None
         assert ai_analysis["confidence"] == 0.92
         assert "sales" in ai_analysis["key_topics"]
-        
+
         # Verify specialized processing
         specialized = result.get_variable("specialized_insights")
         assert specialized["document_type"] == "sales_report"
         assert "revenue" in specialized["key_metrics"]
-        
+
         # Verify final report
         final_report = result.get_variable("final_report")
         assert final_report is not None
