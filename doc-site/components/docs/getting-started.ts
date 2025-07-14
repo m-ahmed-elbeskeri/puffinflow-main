@@ -397,8 +397,8 @@ async def fetch_revenue_data(context):
     
     context.set_variable("revenue_data", revenue_data)
     
-    print(f"✅ Total revenue: ${revenue_data['total_revenue']:,}")
-    print(f"   Today's revenue: ${revenue_data['revenue_today']:,}")
+    print(f"✅ Total revenue: {revenue_data['total_revenue']:,}")
+    print(f"   Today's revenue: {revenue_data['revenue_today']:,}")
     print(f"   Average order: ${revenue_data['avg_order_value']}")
 
 async def calculate_business_metrics(context):
@@ -484,7 +484,7 @@ async def generate_executive_report(context):
     context.set_variable("report_ready", True)
     
     print("🎉 Executive report generated!")
-    print(f"📊 Summary: {executive_report['kpis']['total_users']} users, ${executive_report['kpis']['total_revenue']:,} revenue")
+    print(f"📊 Summary: {executive_report['kpis']['total_users']} users, {executive_report['kpis']['total_revenue']:,} revenue")
     print(f"📈 Growth: {executive_report['growth']['new_signups_today']} new users today")
 
 # Configure the workflow with proper dependencies
@@ -518,7 +518,7 @@ async def main():
         # Show key metrics
         kpis = report['kpis']
         print(f"👥 Users: {kpis['total_users']} total, {kpis['active_users']} active")
-        print(f"💰 Revenue: ${kpis['total_revenue']:,} (${kpis['revenue_per_user']} per user)")
+        print(f"💰 Revenue: {kpis['total_revenue']:,} ({kpis['revenue_per_user']} per user)")
     else:
         print("❌ Pipeline failed - check logs above")
 
@@ -742,7 +742,7 @@ async def fetch_sales_data(context):
     }
     
     context.set_variable("sales_data", sales_data)
-    print(f"✅ Sales data fetched: ${sales_data['total_revenue']:,} total revenue")
+    print(f"✅ Sales data fetched: {sales_data['total_revenue']:,} total revenue")
 
 async def fetch_product_data(context):
     """Fetch product catalog - can also run in parallel."""
@@ -1088,7 +1088,7 @@ async def transform_data(context):
     context.set_variable("enriched_users", enriched_users)
     context.set_variable("summary_metrics", summary)
     
-    print(f"✅ Transformed data: {summary['total_users']} users, \${summary['total_revenue']:.2f} total revenue")
+    print(f"✅ Transformed data: {summary['total_users']} users, {summary['total_revenue']:.2f} total revenue")
 
 async def validate_data(context):
     """Validate the transformed data meets quality standards."""
