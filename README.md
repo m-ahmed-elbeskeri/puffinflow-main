@@ -5,7 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **PuffinFlow is a powerful Python framework for developers who need to rapidly prototype LLM workflows and seamlessly transition them to production-ready systems.**
-https://github.com/user-attachments/assets/0dda5b97-20d8-4f61-bf14-0bc9172a6774
+
+
+https://github.com/user-attachments/assets/d85d785a-f632-4c3c-a8bd-afd642dcd5b8
+
+
 
 Perfect for AI engineers, data scientists, and backend developers who want to focus on workflow logic rather than infrastructure complexity.
 
